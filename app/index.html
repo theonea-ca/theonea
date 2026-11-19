@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>THE ONEA · 我的皮肤档案</title>
+<meta name="theme-color" content="#F7F6F2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="THE ONEA">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Serif+SC:wght@400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --bg:#F7F6F2; --sand:#D9D2C4; --ink:#1E1E1E;
+  --sand-soft:#EAE5DB; --muted:#8A8478; --line:#E2DCD0; --card:#FBFAF7;
+  --accent:#9C8B6E;
+  --serif-en:'Cormorant Garamond',serif;
+  --serif-zh:'Noto Serif SC',serif;
+  --sans:'Noto Sans SC',-apple-system,BlinkMacSystemFont,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:400}
+body{min-height:100vh;padding-top:env(safe-area-inset-top);}
+.app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+
+/* header */
+header{display:flex;justify-content:space-between;align-items:center;padding:18px 22px 10px;position:sticky;top:0;background:var(--bg);z-index:5}
+.wordmark{font-family:var(--serif-en);font-size:19px;letter-spacing:.32em;font-weight:500}
+.tagline{font-family:var(--serif-en);font-style:italic;font-size:13px;color:var(--muted);letter-spacing:.04em}
+
+main{padding:4px 22px 0}
+.view{display:none;animation:fade .35s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.eyebrow{font-family:var(--serif-en);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--serif-zh);font-weight:400;font-size:25px;line-height:1.45;margin:6px 0 4px}
+h2{font-family:var(--serif-zh);font-weight:400;font-size:18px;margin:2px 0}
+.sub{font-size:13px;color:var(--muted);line-height:1.7}
+section{margin-top:26px}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+.divider{height:1px;background:var(--line);margin:14px 0}
+
+/* stage card */
+.stage{background:var(--ink);color:var(--bg);border-radius:20px;padding:20px;position:relative;overflow:hidden}
+.stage .eyebrow{color:#B8B0A1}
+.stage h2{color:var(--bg);font-size:20px;margin-top:6px}
+.stage .sub{color:#C9C2B4}
+.progress{display:flex;gap:5px;margin:16px 0 10px}
+.progress span{flex:1;height:3px;border-radius:3px;background:#46433E}
+.progress span.done{background:var(--sand)}
+.progress span.now{background:linear-gradient(90deg,var(--sand) 40%,#46433E 40%)}
+.stage .next{display:flex;justify-content:space-between;font-size:12px;color:#C9C2B4;margin-top:6px}
+.stage .next b{color:var(--bg);font-weight:500}
+
+/* note */
+.note{display:flex;gap:12px;align-items:flex-start}
+.avatar{flex:none;width:36px;height:36px;border-radius:50%;background:var(--sand);display:grid;place-items:center;font-family:var(--serif-en);font-size:15px;letter-spacing:.05em}
+.note p{font-family:var(--serif-zh);font-size:14.5px;line-height:1.8}
+.note small{display:block;font-size:11.5px;color:var(--muted);margin-top:6px}
+
+/* ritual */
+.seg{display:flex;background:var(--sand-soft);border-radius:999px;padding:3px;width:fit-content}
+.seg button{border:0;background:none;font:inherit;font-size:12.5px;padding:6px 14px;border-radius:999px;color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.steps{list-style:none}
+.step{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.step:last-child{border-bottom:0}
+.num{font-family:var(--serif-en);font-size:13px;color:var(--muted);width:16px}
+.step .t{flex:1}
+.step .t div{font-size:14.5px}
+.step .t small{font-size:12px;color:var(--muted)}
+.check{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--sand);display:grid;place-items:center;transition:.2s}
+.step.done .check{background:var(--ink);border-color:var(--ink)}
+.step.done .check::after{content:"";width:6px;height:10px;border:solid var(--bg);border-width:0 1.5px 1.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.step.done .t div{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--sand)}
+.ritual-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px;color:var(--muted)}
+.pause{margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--sand-soft);font-size:12.5px;line-height:1.7}
+.pause b{font-weight:500}
+
+/* journey timeline */
+.timeline{position:relative;padding-left:28px}
+.timeline::before{content:"";position:absolute;left:8px;top:8px;bottom:8px;width:1px;background:var(--sand)}
+.node{position:relative;padding:0 0 22px}
+.node .dot{position:absolute;left:-28px;top:3px;width:17px;height:17px;border-radius:50%;background:var(--bg);border:1.5px solid var(--sand)}
+.node.done .dot{background:var(--sand);border-color:var(--sand)}
+.node.done .dot::after{content:"";position:absolute;left:5px;top:2.5px;width:4px;height:8px;border:solid var(--ink);border-width:0 1.3px 1.3px 0;transform:rotate(45deg)}
+.node.now .dot{background:var(--ink);border-color:var(--ink);box-shadow:0 0 0 5px rgba(30,30,30,.08)}
+.node .row{display:flex;justify-content:space-between;align-items:baseline;cursor:pointer}
+.node .name{font-family:var(--serif-zh);font-size:16px}
+.node .en{font-family:var(--serif-en);font-style:italic;font-size:13px;color:var(--muted);margin-left:6px}
+.node .date{font-size:12px;color:var(--muted);white-space:nowrap}
+.node.upcoming .name{color:var(--muted)}
+.node .body{display:none;margin-top:10px;font-size:13.5px;line-height:1.8;color:#3D3A35;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.node.open .body{display:block}
+.tag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;background:var(--sand-soft);color:#5C564C;margin-left:8px;vertical-align:2px}
+.node.now .tag{background:var(--ink);color:var(--bg)}
+
+/* compare */
+.compare{position:relative;aspect-ratio:3/4;border-radius:18px;overflow:hidden;background:var(--sand-soft);user-select:none;touch-action:none}
+.compare .layer{position:absolute;inset:0;background-size:cover;background-position:center}
+.compare .after{clip-path:inset(0 0 0 50%)}
+.compare .handle{position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--bg);transform:translateX(-1px)}
+.compare .handle::after{content:"‹ ›";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:38px;height:38px;border-radius:50%;background:var(--bg);display:grid;place-items:center;font-size:15px;color:var(--ink);box-shadow:0 2px 10px rgba(0,0,0,.12);letter-spacing:2px}
+.compare .lbl{position:absolute;bottom:12px;font-size:11px;letter-spacing:.2em;color:var(--bg);background:rgba(30,30,30,.45);padding:4px 10px;border-radius:999px;font-family:var(--serif-en)}
+.compare .lbl.l{left:12px}.compare .lbl.r{right:12px}
+.placeholder{display:grid;place-items:center;text-align:center;color:var(--muted);font-size:12px;line-height:1.7}
+.uploads{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--ink);background:none;color:var(--ink);font:inherit;font-size:13px;padding:11px 14px;border-radius:999px;cursor:pointer;text-decoration:none;text-align:center}
+.btn.solid{background:var(--ink);color:var(--bg)}
+.btn.ghost{border-color:var(--sand)}
+.btn input{display:none}
+
+/* profile */
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fact{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.fact .k{font-size:11.5px;color:var(--muted)}
+.fact .v{font-family:var(--serif-zh);font-size:16px;margin-top:4px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:12.5px;padding:6px 12px;border-radius:999px;border:1px solid var(--sand);background:var(--card)}
+.chip.avoid{border-style:dashed;color:#7A6F5E}
+.metric{margin-bottom:16px}
+.metric:last-child{margin-bottom:0}
+.metric .top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:7px}
+.metric .top span:last-child{color:var(--muted);font-size:12px}
+.metric .top b{color:var(--ink);font-weight:500}
+.bar{position:relative;height:6px;border-radius:6px;background:var(--sand-soft)}
+.bar .was{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--sand)}
+.bar .now{position:absolute;top:-4px;width:14px;height:14px;border-radius:50%;background:var(--ink);border:2px solid var(--card);transform:translateX(-7px)}
+.legend{display:flex;gap:16px;font-size:11.5px;color:var(--muted);margin-bottom:14px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.history{list-style:none}
+.history li{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.history li:last-child{border-bottom:0}
+.history .d{font-family:var(--serif-en);font-size:14px;color:var(--muted);white-space:nowrap}
+.history .n{font-size:14px}
+.history small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+
+/* studio */
+.studio-hero{text-align:center;padding:26px 10px 8px}
+.studio-hero .big{font-family:var(--serif-en);font-size:30px;letter-spacing:.3em;font-weight:500}
+.studio-hero .phil{font-family:var(--serif-en);font-style:italic;color:var(--muted);margin-top:4px}
+.list a,.list div.item{display:flex;justify-content:space-between;align-items:center;padding:15px 0;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:14.5px}
+.list a:last-child{border-bottom:0}
+.list small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.arrow{color:var(--muted);font-family:var(--serif-en);font-size:18px}
+.howto{font-size:13px;line-height:1.9;color:#3D3A35}
+.howto b{font-weight:500}
+
+/* tab bar */
+nav{position:fixed;bottom:0;left:0;right:0;background:rgba(247,246,242,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:10}
+nav .inner{max-width:480px;margin:0 auto;display:flex}
+nav button{flex:1;border:0;background:none;font:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:var(--muted);cursor:pointer}
+nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.3}
+nav button span{font-size:11px}
+nav button.on{color:var(--ink)}
+
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);font-size:13px;padding:10px 18px;border-radius:999px;opacity:0;transition:.3s;pointer-events:none;z-index:20;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.foot{text-align:center;font-family:var(--serif-en);font-style:italic;color:var(--muted);font-size:13px;margin:34px 0 10px}
+
+.langbtn{border:1px solid var(--sand);background:none;font:inherit;font-size:12px;padding:5px 12px;border-radius:999px;color:var(--ink);cursor:pointer;letter-spacing:.05em}
+.hdr-right{display:flex;align-items:center;gap:12px}
+#login{min-height:100vh;display:flex;flex-direction:column;max-width:420px;margin:0 auto;padding:22px 26px calc(30px + env(safe-area-inset-bottom))}
+#login .top{display:flex;justify-content:flex-end}
+#login .mid{flex:1;display:flex;flex-direction:column;justify-content:center}
+#login .big{font-family:var(--serif-en);font-size:34px;letter-spacing:.32em;font-weight:500;text-align:center}
+#login .phil{font-family:var(--serif-en);font-style:italic;color:var(--muted);text-align:center;margin:6px 0 40px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.04em}
+.field input{width:100%;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:14px 16px;font:inherit;font-size:16px;color:var(--ink);outline:none}
+.field input:focus{border-color:var(--ink)}
+.err{min-height:20px;font-size:13px;color:#A0563F;margin:4px 0 10px}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.7;text-align:center;margin-top:18px}
+.demo{margin-top:22px;padding:12px 14px;border:1px dashed var(--sand);border-radius:12px;font-size:12px;color:var(--muted);line-height:1.7;text-align:center}
+.btn.full{width:100%;padding:14px}
+.btn:disabled{opacity:.5}
+.empty{font-size:13px;color:var(--muted);padding:6px 0}
+.logout{margin-top:14px;width:100%}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login" class="hidden">
+  <div class="top"><button class="langbtn" data-lang-toggle></button></div>
+  <div class="mid">
+    <div class="big">THE ONEA</div>
+    <div class="phil">Slow Beauty · One Ritual</div>
+    <h1 style="text-align:center;font-size:21px" data-t="loginTitle"></h1>
+    <p class="sub" style="text-align:center;margin-bottom:26px" data-t="loginSub"></p>
+    <form id="login-form" autocomplete="on">
+      <div class="field"><label data-t="phone"></label><input id="in-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="519 555 0123"></div>
+      <div class="field"><label data-t="code"></label><input id="in-code" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="••••••"></div>
+      <div class="err" id="login-err"></div>
+      <button class="btn solid full" id="login-btn" type="submit" data-t="signin"></button>
+    </form>
+    <p class="hint" data-t="noCode"></p>
+    <div class="demo hidden" id="demo-hint"><span data-t="demoHint"></span><br><a href="admin.html" style="color:var(--ink)">打开工作室后台（演示）→</a></div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="app hidden" id="app">
+  <header>
+    <div class="wordmark">THE ONEA</div>
+    <div class="hdr-right"><span class="tagline">Skin first.</span><button class="langbtn" data-lang-toggle></button></div>
+  </header>
+  <main>
+    <div class="view active" id="v-today"></div>
+    <div class="view" id="v-journey"></div>
+    <div class="view" id="v-profile"></div>
+    <div class="view" id="v-studio"></div>
+  </main>
+  <nav>
+    <div class="inner">
+      <button class="on" data-v="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><span data-t="navToday"></span></button>
+      <button data-v="journey"><svg viewBox="0 0 24 24"><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><path d="M7 18h6a3 3 0 0 0 0-6h-2a3 3 0 0 1 0-6h6"/></svg><span data-t="navJourney"></span></button>
+      <button data-v="profile"><svg viewBox="0 0 24 24"><path d="M12 3c4 0 7 3 7 7.5 0 5-3.5 10.5-7 10.5S5 15.5 5 10.5C5 6 8 3 12 3z"/><path d="M9.5 14.5c1.4 1 3.6 1 5 0"/></svg><span data-t="navProfile"></span></button>
+      <button data-v="studio"><svg viewBox="0 0 24 24"><path d="M4 20V10l8-6 8 6v10"/><path d="M10 20v-5h4v5"/></svg><span data-t="navStudio"></span></button>
+    </div>
+  </nav>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="store.js"></script>
+<script>
+const { CFG, PRESETS, METRICS, JOURNEY, DB, LIVE } = window.ONEA;
+
+/* ================= UI TEXT ================= */
+const T = {
+  zh: {
+    loginTitle:"你的皮肤档案", loginSub:"用工作室给你的手机号和访问码登录",
+    phone:"手机号", code:"访问码", signin:"进入", signingIn:"登录中…",
+    noCode:"还没有访问码？下次到店时向护理师索取。",
+    demoHint:"演示模式 · 手机号 519 555 0123 · 访问码 123456",
+    errNomatch:"手机号或访问码不正确", errLocked:"尝试次数太多，请 15 分钟后再试", errNetwork:"网络不稳定，请稍后再试", errEmpty:"请填写手机号和访问码",
+    morning:"早安", afternoon:"午安", evening:"晚安",
+    todaySub:"今天也不用做很多，做对就好。",
+    stageEyebrow:"Skin Journey · 第 {n} / 7 阶段", upNext:"下一阶段 · ",
+    stageDesc:"已完成 {n} 个节点。保持现在的节奏，皮肤正在慢慢变稳定。",
+    allDone:"七个节点都完成了。下一段旅程，我们一起计划。", allDoneTitle:"旅程完成",
+    nextStop:"下一站", daysLeft:"还有 {n} 天", isToday:"就是今天", toBook:"待预约", tbd:"日期待定",
+    ritual:"今日仪式", am:"早 AM", pm:"晚 PM", doneCount:"已完成 {n} / {m}", complete:"今天的仪式完成了 ✓", resets:"每天自动重置",
+    toastAm:"早间仪式完成，出门记得补防晒", toastPm:"晚间仪式完成，早点休息", noRitual:"护理师还没有添加这部分步骤。",
+    note:"护理师留言", noteBy:"ONEA 护理师",
+    journeyTitle:"你的皮肤旅程", journeySub:"从理解开始，而不是叠加。每一个节点，都是一次重新认识自己的皮肤。",
+    compare:"前后对比", upBefore:"上传「之前」", upAfter:"上传「现在」",
+    photoTip:"建议同一光线、同一角度、素颜拍摄。照片只保存在你自己的手机上。",
+    phBefore:"上传之前的照片", phAfter:"上传现在的照片", photoSaved:"照片已保存在本机", photoShown:"照片已显示（此浏览器无法保存）",
+    profileTitle:"我的皮肤档案", since:"建档于 {a}", updated:" · 最近更新 {b}",
+    skinType:"肤质", sensitivity:"敏感程度", goal:"当前目标", together:"已陪伴", days:"{n} 天",
+    focus:"目前关注", avoid:"暂时避开", analysis:"皮肤检测", first:"首次检测", latest:"最近一次", better:"变好",
+    metricNote:"泛红、油脂数值越低越好；其余越高越好。", history:"护理记录", none:"暂无",
+    book:"预约下一次护理", intake:"预填表", intakeSub:"第一次来之前填写，节省到店时间",
+    guide:"到店指南", guideSub:"停车、入口、到店前注意事项", site:"官网 · theonea.ca", siteSub:"了解 ONEA 的护理理念",
+    address:"工作室地址", install:"添加到主屏幕",
+    installText:"<b>iPhone：</b>用 Safari 打开 → 点底部「分享」按钮 → 选择「添加到主屏幕」<br><b>安卓：</b>用 Chrome 打开 → 点右上角「⋮」→ 选择「添加到主屏幕」或「安装应用」<br><span style='color:var(--muted)'>之后就能像 App 一样，从桌面直接打开。</span>",
+    logout:"退出登录",
+    navToday:"今日", navJourney:"旅程", navProfile:"档案", navStudio:"工作室",
+    footToday:"Slow beauty, one ritual.", footProfile:"好的护肤，始于理解。"
+  },
+  en: {
+    loginTitle:"Your skin profile", loginSub:"Sign in with the phone number and access code from the studio",
+    phone:"Phone number", code:"Access code", signin:"Sign in", signingIn:"Signing in…",
+    noCode:"No access code yet? Ask your therapist at your next visit.",
+    demoHint:"Demo mode · Phone 519 555 0123 · Code 123456",
+    errNomatch:"That phone number and code don't match", errLocked:"Too many attempts. Please try again in 15 minutes.", errNetwork:"Connection problem — please try again.", errEmpty:"Please enter your phone number and code",
+    morning:"Good morning", afternoon:"Good afternoon", evening:"Good evening",
+    todaySub:"No need to do more today — just do it right.",
+    stageEyebrow:"Skin Journey · Stage {n} of 7", upNext:"Up next · ",
+    stageDesc:"{n} of 7 steps complete. Keep the rhythm — your skin is settling in.",
+    allDone:"All seven steps complete. Let's plan the next chapter together.", allDoneTitle:"Journey complete",
+    nextStop:"Next", daysLeft:"in {n} days", isToday:"Today", toBook:"To be booked", tbd:"Date TBD",
+    ritual:"Daily ritual", am:"AM", pm:"PM", doneCount:"{n} of {m} done", complete:"Ritual complete ✓", resets:"Resets daily",
+    toastAm:"Morning ritual done — sunscreen on the go", toastPm:"Evening ritual done — rest well", noRitual:"Your therapist hasn't added these steps yet.",
+    note:"From your therapist", noteBy:"ONEA therapist",
+    journeyTitle:"Your skin journey", journeySub:"It starts with understanding, not layering. Each step is a chance to know your skin again.",
+    compare:"Before & after", upBefore:"Add before", upAfter:"Add now",
+    photoTip:"Same light, same angle, bare skin works best. Photos stay on your own phone.",
+    phBefore:"Add a before photo", phAfter:"Add a current photo", photoSaved:"Photo saved on this device", photoShown:"Photo shown (this browser can't save it)",
+    profileTitle:"My skin profile", since:"Since {a}", updated:" · Updated {b}",
+    skinType:"Skin type", sensitivity:"Sensitivity", goal:"Current goal", together:"Together for", days:"{n} days",
+    focus:"Current focus", avoid:"Avoid for now", analysis:"Skin analysis", first:"First", latest:"Latest", better:"better",
+    metricNote:"For redness and sebum, lower is better; for the rest, higher is better.", history:"Treatment history", none:"Nothing yet",
+    book:"Book your next visit", intake:"Intake form", intakeSub:"Fill in before your first visit to save time",
+    guide:"Visit guide", guideSub:"Parking, entrance and what to know before you come", site:"Website · theonea.ca", siteSub:"The ONEA approach to skin",
+    address:"Studio address", install:"Add to home screen",
+    installText:"<b>iPhone:</b> open in Safari → tap Share → “Add to Home Screen”<br><b>Android:</b> open in Chrome → tap “⋮” → “Add to Home screen” or “Install app”<br><span style='color:var(--muted)'>Then open it from your home screen like any app.</span>",
+    logout:"Sign out",
+    navToday:"Today", navJourney:"Journey", navProfile:"Profile", navStudio:"Studio",
+    footToday:"Slow beauty, one ritual.", footProfile:"Good skincare begins with understanding."
+  }
+};
+
+/* ================= HELPERS ================= */
+const store = {
+  get(k,d){ try{const v=localStorage.getItem("onea:"+k);return v==null?d:JSON.parse(v);}catch(e){return d;} },
+  set(k,v){ try{localStorage.setItem("onea:"+k,JSON.stringify(v));return true;}catch(e){return false;} },
+  del(k){ try{localStorage.removeItem("onea:"+k);}catch(e){} }
+};
+let lang = store.get("lang", (navigator.language||"").toLowerCase().startsWith("zh") ? "zh" : "en");
+let client = null, view = "today", ritualMode = new Date().getHours() < 15 ? "am" : "pm";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const t = (k, vars={}) => (T[lang][k] ?? k).replace(/\{(\w+)\}/g, (_, v) => vars[v]);
+const L = o => !o ? "" : typeof o === "string" ? o : (o[lang] || o.zh || o.en || "");
+const P = (group, item) => typeof item === "string" ? L(PRESETS[group][item]) : L(item);
+const today = new Date();
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const parse = s => new Date(s + "T12:00:00");
+const fmt = s => { if(!s) return t("tbd"); const d=parse(s); return lang==="zh" ? `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}` : d.toLocaleDateString("en-CA",{month:"short",day:"numeric",year:"numeric"}); };
+const fmtShort = s => { const d=parse(s); return lang==="zh" ? `${d.getMonth()+1}.${String(d.getDate()).padStart(2,"0")}` : d.toLocaleDateString("en-CA",{month:"short",day:"numeric"}); };
+const toast = m => { const el=$("#toast"); el.textContent=m; el.classList.add("show"); clearTimeout(el._h); el._h=setTimeout(()=>el.classList.remove("show"),1900); };
+
+function applyStatic(){
+  document.documentElement.lang = lang==="zh" ? "zh-CN" : "en";
+  document.querySelectorAll("[data-t]").forEach(el => el.innerHTML = t(el.dataset.t));
+  document.querySelectorAll("[data-lang-toggle]").forEach(b => b.textContent = lang==="zh" ? "EN" : "中文");
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest("[data-lang-toggle]")) return;
+  lang = lang==="zh" ? "en" : "zh"; store.set("lang", lang);
+  applyStatic(); if (client) renderAll();
+});
+
+/* ================= LOGIN ================= */
+function showLogin(){ $("#app").classList.add("hidden"); $("#login").classList.remove("hidden"); if(!LIVE) $("#demo-hint").classList.remove("hidden"); }
+async function doLogin(phone, code, silent){
+  const btn=$("#login-btn"); btn.disabled=true; btn.textContent=t("signingIn"); $("#login-err").textContent="";
+  const r = await DB.clientLogin(phone, code);
+  btn.disabled=false; btn.textContent=t("signin");
+  if (r && r.ok) {
+    client = r.client; store.set("session", {phone, code});
+    $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
+    renderAll(); return;
+  }
+  if (r && r.error==="network" && silent) {
+    const cached = store.get("cache", null);  // offline: show last known profile
+    if (cached) { client=cached; $("#login").classList.add("hidden"); $("#app").classList.remove("hidden"); renderAll(); return; }
+  }
+  if (silent && r.error==="nomatch") store.del("session");
+  showLogin();
+  $("#login-err").textContent = t(r.error==="locked" ? "errLocked" : r.error==="network" ? "errNetwork" : "errNomatch");
+}
+$("#login-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const p=$("#in-phone").value, c=$("#in-code").value;
+  if (!p.trim() || !c.trim()) { $("#login-err").textContent=t("errEmpty"); return; }
+  doLogin(p, c);
+});
+
+/* ================= RENDER ================= */
+function renderAll(){
+  store.set("cache", client);
+  applyStatic(); renderToday(); renderJourney(); renderProfile(); renderStudio();
+}
+
+function journeyState(){
+  const j = client.data.journey || [];
+  const doneN = j.filter(x=>x.done).length;
+  const idx = j.findIndex(x=>!x.done);
+  return { j, doneN, idx };
+}
+
+function renderToday(){
+  const d = client.data, h = today.getHours();
+  const { j, doneN, idx } = journeyState();
+  const wk = lang==="zh" ? `周${"日一二三四五六"[today.getDay()]}` : today.toLocaleDateString("en-CA",{weekday:"long"});
+  const dateLine = lang==="zh" ? `${today.getMonth()+1}月${today.getDate()}日 · ${wk}` : `${wk} · ${today.toLocaleDateString("en-CA",{month:"long",day:"numeric"})}`;
+  const greet = `${t(h<11?"morning":h<18?"afternoon":"evening")}${lang==="zh"?"，":", "}${esc(client.name)}`;
+
+  let stage;
+  if (idx === -1) {
+    stage = `<div class="eyebrow">Skin Journey · 7 / 7</div><h2>${t("allDoneTitle")}</h2><p class="sub">${t("allDone")}</p>
+      <div class="progress">${j.map(()=>'<span class="done"></span>').join("")}</div>`;
+  } else {
+    const cur = j[idx], name = L(JOURNEY[idx]);
+    let when = t("tbd");
+    if (cur.date) { const n=Math.ceil((parse(cur.date)-today)/864e5); when = n>0 ? t("daysLeft",{n}) : n===0 ? t("isToday") : t("toBook"); }
+    stage = `<div class="eyebrow">${t("stageEyebrow",{n:idx+1})}</div>
+      <h2>${t("upNext")}${name}</h2><p class="sub">${t("stageDesc",{n:doneN})}</p>
+      <div class="progress">${j.map((x,i)=>`<span class="${x.done?'done':i===idx?'now':''}"></span>`).join("")}</div>
+      <div class="next"><span>${t("nextStop")} <b>${name}${cur.date?" · "+fmt(cur.date):""}</b></span><span>${when}</span></div>`;
+  }
+
+  const note = L(d.note?.text);
+  $("#v-today").innerHTML = `
+    <div class="eyebrow">${dateLine}</div>
+    <h1>${greet}</h1><p class="sub">${t("todaySub")}</p>
+    <section><div class="stage">${stage}</div></section>
+    <section>
+      <div class="sec-head"><h2>${t("ritual")}</h2>
+        <div class="seg" id="seg"><button data-r="am">${t("am")}</button><button data-r="pm">${t("pm")}</button></div></div>
+      <div class="card"><ul class="steps" id="steps"></ul>
+        <div class="ritual-foot"><span id="ritual-count"></span><span>${t("resets")}</span></div>
+        ${L(d.weekly) ? `<div class="pause">${esc(L(d.weekly))}</div>` : ""}
+      </div>
+    </section>
+    ${note ? `<section><div class="sec-head"><h2>${t("note")}</h2><span class="eyebrow">Note</span></div>
+      <div class="card note"><div class="avatar">O</div><div><p>${esc(note)}</p>
+      <small>${t("noteBy")}${d.note.date?" · "+fmt(d.note.date):""}</small></div></div></section>` : ""}
+    <div class="foot">${t("footToday")}</div>`;
+  $("#seg").onclick = e => { const b=e.target.closest("button"); if(b){ ritualMode=b.dataset.r; renderRitual(); } };
+  $("#steps").onclick = e => {
+    const li=e.target.closest(".step"); if(!li) return;
+    const key=`ritual:${client.id}:${ymd(today)}`, done=store.get(key,{am:[],pm:[]}), arr=done[ritualMode], i=+li.dataset.i;
+    const p=arr.indexOf(i); p>-1?arr.splice(p,1):arr.push(i); store.set(key,done); renderRitual();
+    if (arr.length===(d.ritual?.[ritualMode]||[]).length) toast(t(ritualMode==="am"?"toastAm":"toastPm"));
+  };
+  renderRitual();
+}
+function renderRitual(){
+  const list = client.data.ritual?.[ritualMode] || [];
+  const done = store.get(`ritual:${client.id}:${ymd(today)}`, {am:[],pm:[]})[ritualMode];
+  document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on", b.dataset.r===ritualMode));
+  $("#steps").innerHTML = list.length ? list.map((s,i)=>`
+    <li class="step ${done.includes(i)?'done':''}" data-i="${i}">
+      <span class="num">${String(i+1).padStart(2,"0")}</span>
+      <div class="t"><div>${esc(L(s.t))}</div>${L(s.s)?`<small>${esc(L(s.s))}</small>`:""}</div>
+      <span class="check"></span></li>`).join("") : `<li class="empty">${t("noRitual")}</li>`;
+  const n = done.filter(i=>i<list.length).length;
+  $("#ritual-count").textContent = !list.length ? "" : n===list.length ? t("complete") : t("doneCount",{n,m:list.length});
+}
+
+function renderJourney(){
+  const { j, idx } = journeyState();
+  $("#v-journey").innerHTML = `
+    <div class="eyebrow">Skin Journey</div><h1>${t("journeyTitle")}</h1><p class="sub">${t("journeySub")}</p>
+    <section><div class="timeline" id="timeline">${j.map((x,i)=>{
+      const cls = x.done ? "done" : i===idx ? "now open" : "upcoming";
+      const body = L(x.body);
+      return `<div class="node ${cls}"><span class="dot"></span>
+        <div class="row"><div><span class="name">${L(JOURNEY[i])}</span>${lang==="zh"?`<span class="en">${JOURNEY[i].en}</span>`:""}${i===idx?`<span class="tag">${t("nextStop")}</span>`:""}</div>
+        <span class="date">${x.date?fmt(x.date):""}</span></div>
+        ${body?`<div class="body">${esc(body)}</div>`:""}</div>`;}).join("")}</div></section>
+    <section>
+      <div class="sec-head"><h2>${t("compare")}</h2><span class="eyebrow">Before · After</span></div>
+      <div class="compare" id="compare">
+        <div class="layer before" id="img-before"></div><div class="layer after" id="img-after"></div>
+        <div class="handle" id="handle"></div><span class="lbl l">BEFORE</span><span class="lbl r">AFTER</span>
+      </div>
+      <div class="uploads">
+        <label class="btn ghost">${t("upBefore")}<input type="file" accept="image/*" data-slot="before"></label>
+        <label class="btn ghost">${t("upAfter")}<input type="file" accept="image/*" data-slot="after"></label>
+      </div>
+      <p class="sub" style="margin-top:10px;font-size:12px">${t("photoTip")}</p>
+    </section>
+    <div class="foot">Skin first. Treatment second.</div>`;
+  $("#timeline").onclick = e => { const n=e.target.closest(".node"); if(n) n.classList.toggle("open"); };
+  setupCompare();
+}
+function setupCompare(){
+  const box=$("#compare"), after=$("#img-after"), before=$("#img-before"), handle=$("#handle");
+  const ph = which => `url("data:image/svg+xml;utf8,${encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 400'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='${which==='b'?'#E4DCCF':'#EFEAE1'}'/><stop offset='1' stop-color='${which==='b'?'#D3C8B6':'#E2DACB'}'/></linearGradient></defs><rect width='300' height='400' fill='url(#g)'/><ellipse cx='150' cy='180' rx='78' ry='100' fill='none' stroke='#B8AD9A' stroke-width='1.2'/><path d='M60 400c10-70 45-100 90-100s80 30 90 100' fill='none' stroke='#B8AD9A' stroke-width='1.2'/></svg>`)}")`;
+  const pk = slot => `photo:${client.id}:${slot}`;
+  const b=store.get(pk("before"),null), a=store.get(pk("after"),null);
+  before.style.backgroundImage = b?`url(${b})`:ph("b"); after.style.backgroundImage = a?`url(${a})`:ph("a");
+  const setPos = x => { const r=box.getBoundingClientRect(); const p=Math.max(0,Math.min(100,(x-r.left)/r.width*100)); after.style.clipPath=`inset(0 0 0 ${p}%)`; handle.style.left=p+"%"; };
+  let drag=false;
+  box.onpointerdown=e=>{drag=true;box.setPointerCapture(e.pointerId);setPos(e.clientX);};
+  box.onpointermove=e=>{if(drag)setPos(e.clientX);};
+  box.onpointerup=box.onpointercancel=()=>drag=false;
+  document.querySelectorAll(".uploads input").forEach(inp=>inp.onchange=e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const img=new Image(), url=URL.createObjectURL(f);
+    img.onload=()=>{
+      const s=Math.min(1,900/Math.max(img.width,img.height)), c=document.createElement("canvas");
+      c.width=img.width*s; c.height=img.height*s; c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      const data=c.toDataURL("image/jpeg",.82), slot=inp.dataset.slot;
+      const ok=store.set(pk(slot),data);
+      (slot==="before"?before:after).style.backgroundImage=`url(${data})`;
+      toast(t(ok?"photoSaved":"photoShown")); URL.revokeObjectURL(url);
+    };
+    img.src=url;
+  });
+}
+
+function renderProfile(){
+  const d = client.data;
+  const doneDates = (d.journey||[]).filter(x=>x.done&&x.date).map(x=>x.date).sort();
+  const last = [...doneDates, ...(d.history||[]).map(h=>h.date)].filter(Boolean).sort().pop();
+  const daysWith = d.since ? Math.max(1, Math.round((today-parse(d.since))/864e5)) : null;
+  const facts = [
+    [t("skinType"), d.skinType ? P("skinType", d.skinType) : "—"],
+    [t("sensitivity"), d.sensitivity ? P("sensitivity", d.sensitivity) : "—"],
+    [t("goal"), L(d.goal) || "—"],
+    [t("together"), daysWith ? t("days",{n:daysWith}) : "—"]
+  ];
+  const chips = (arr, group, cls) => (arr||[]).length ? arr.map(x=>`<span class="chip ${cls}">${esc(P(group,x))}</span>`).join("") : `<span class="empty">${t("none")}</span>`;
+  const ms = METRICS.filter(m => d.metrics?.[m.key] && d.metrics[m.key].now != null);
+  const metrics = ms.map(m=>{
+    const v=d.metrics[m.key], first=v.first ?? v.now, diff=v.now-first, good = m.lower ? diff<0 : diff>0;
+    return `<div class="metric"><div class="top"><span>${L(m)}</span><span><b>${v.now}</b>${v.first!=null?` · ${diff>0?"+":""}${diff}${good?` ↗︎ ${t("better")}`:""}`:""}</span></div>
+      <div class="bar"><div class="was" style="width:${first}%"></div><div class="now" style="left:${v.now}%"></div></div></div>`;
+  }).join("");
+  const hist = [...(d.history||[])].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  $("#v-profile").innerHTML = `
+    <div class="eyebrow">Skin Profile</div><h1>${t("profileTitle")}</h1>
+    <p class="sub">${d.since?t("since",{a:fmt(d.since)}):""}${last?t("updated",{b:fmt(last)}):""}</p>
+    <section><div class="facts">${facts.map(([k,v])=>`<div class="fact"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join("")}</div></section>
+    <section><div class="sec-head"><h2>${t("focus")}</h2><span class="eyebrow">Focus</span></div><div class="chips">${chips(d.concerns,"concerns","")}</div></section>
+    <section><div class="sec-head"><h2>${t("avoid")}</h2><span class="eyebrow">Avoid</span></div><div class="chips">${chips(d.avoid,"avoid","avoid")}</div></section>
+    ${ms.length?`<section><div class="sec-head"><h2>${t("analysis")}</h2><span class="eyebrow">Analysis</span></div>
+      <div class="card"><div class="legend"><span><i style="background:var(--sand)"></i>${t("first")}</span><span><i style="background:var(--ink)"></i>${t("latest")}</span></div>
+      ${metrics}<p class="sub" style="font-size:11.5px;margin-top:14px">${t("metricNote")}</p></div></section>`:""}
+    <section><div class="sec-head"><h2>${t("history")}</h2><span class="eyebrow">History</span></div>
+      <div class="card">${hist.length?`<ul class="history">${hist.map(h=>`<li><div><div class="n">${esc(L(h.name))}</div>${L(h.detail)?`<small>${esc(L(h.detail))}</small>`:""}</div><span class="d">${h.date?fmtShort(h.date):""}</span></li>`).join("")}</ul>`:`<div class="empty">${t("none")}</div>`}</div></section>
+    <div class="foot">${t("footProfile")}</div>`;
+}
+
+function renderStudio(){
+  const a = (href, title, sub) => `<a href="${esc(href)}" target="_blank" rel="noopener"><div>${title}<small>${sub}</small></div><span class="arrow">→</span></a>`;
+  $("#v-studio").innerHTML = `
+    <div class="studio-hero"><div class="big">THE ONEA</div><div class="phil">Slow Beauty · One Ritual</div></div>
+    <section><a class="btn solid" href="${esc(CFG.bookingUrl)}" target="_blank" rel="noopener">${t("book")}</a></section>
+    <section><div class="card list">
+      ${a(CFG.intakeUrl, t("intake"), t("intakeSub"))}
+      ${a(CFG.visitGuideUrl, t("guide"), t("guideSub"))}
+      ${a(CFG.websiteUrl, t("site"), t("siteSub"))}
+      <div class="item"><div>${t("address")}<small>171 Queens Avenue, London ON N6A 5J7</small></div></div>
+    </div></section>
+    <section><div class="sec-head"><h2>${t("install")}</h2><span class="eyebrow">Install</span></div>
+      <div class="card howto">${t("installText")}</div></section>
+    <button class="btn ghost logout" id="logout">${t("logout")}</button>
+    <div class="foot">Inspired by global skincare traditions.<br>Thoughtfully refined for your skin.</div>`;
+  $("#logout").onclick = () => { store.del("session"); store.del("cache"); client=null; $("#in-code").value=""; applyStatic(); showLogin(); };
+}
+
+/* ================= NAV ================= */
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{
+  view=b.dataset.v;
+  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id==="v-"+view));
+  window.scrollTo({top:0,behavior:"smooth"});
+}));
+
+/* ================= START ================= */
+applyStatic();
+const sess = store.get("session", null);
+if (sess) doLogin(sess.phone, sess.code, true); else showLogin();
+
+if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js").catch(()=>{}); } catch(e) {} }
+</script>
+</body>
+</html>

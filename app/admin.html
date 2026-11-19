@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>THE ONEA · 后台</title>
+<meta name="theme-color" content="#F7F6F2">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Noto+Serif+SC:wght@400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F7F6F2;--sand:#D9D2C4;--ink:#1E1E1E;--sand-soft:#EAE5DB;--muted:#8A8478;--line:#E2DCD0;--card:#FBFAF7;--warn:#A0563F;
+  --serif-en:'Cormorant Garamond',serif;--serif-zh:'Noto Serif SC',serif;--sans:'Noto Sans SC',-apple-system,BlinkMacSystemFont,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;padding-top:env(safe-area-inset-top)}
+.wrap{max-width:820px;margin:0 auto;padding:0 20px 120px}
+.hidden{display:none!important}
+.top{display:flex;justify-content:space-between;align-items:center;padding:18px 0 14px;position:sticky;top:0;background:var(--bg);z-index:5;gap:12px}
+.wordmark{font-family:var(--serif-en);font-size:18px;letter-spacing:.32em;font-weight:500}
+.wordmark small{font-family:var(--sans);letter-spacing:.1em;font-size:11px;color:var(--muted);margin-left:8px}
+h1{font-family:var(--serif-zh);font-weight:400;font-size:24px;margin:6px 0}
+h2{font-family:var(--serif-zh);font-weight:400;font-size:17px}
+.eyebrow{font-family:var(--serif-en);font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted)}
+.sub{font-size:13px;color:var(--muted);line-height:1.7}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--ink);background:none;color:var(--ink);font:inherit;font-size:13px;padding:9px 16px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.btn.solid{background:var(--ink);color:var(--bg)}
+.btn.ghost{border-color:var(--sand)}
+.btn.sm{padding:6px 12px;font-size:12px}
+.btn.warn{border-color:var(--warn);color:var(--warn)}
+.btn:disabled{opacity:.5}
+.icon{border:0;background:none;font:inherit;color:var(--muted);cursor:pointer;padding:6px 8px;font-size:15px;border-radius:8px}
+.icon:hover{background:var(--sand-soft);color:var(--ink)}
+input,select,textarea{width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;color:var(--ink);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--ink)}
+textarea{resize:vertical;min-height:84px;line-height:1.6}
+label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:14px}
+.sec{margin-top:26px}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:600px){.grid2,.grid3{grid-template-columns:1fr}}
+.bi{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:600px){.bi{grid-template-columns:1fr}}
+.bi .tagz{position:relative}
+.bi .tagz::before{content:attr(data-l);position:absolute;right:10px;top:9px;font-size:10px;color:var(--muted);letter-spacing:.1em;pointer-events:none}
+.bi input,.bi textarea{padding-right:34px}
+.field{margin-bottom:12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--sand);background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer;color:var(--ink)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.chip.custom{background:var(--sand-soft);border-style:dashed}
+.chip .x{margin-left:6px;opacity:.6}
+.addrow{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:12px}
+@media(max-width:600px){.addrow{grid-template-columns:1fr 1fr}.addrow .btn{grid-column:1/-1}}
+.metric-row{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.metric-row:last-child{border-bottom:0}
+.metric-row .lbl small{display:block;color:var(--muted);font-size:11px}
+.jrow{padding:14px 0;border-bottom:1px solid var(--line)}
+.jrow:last-child{border-bottom:0}
+.jhead{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.jhead .n{font-family:var(--serif-zh);font-size:15px;flex:1;min-width:120px}
+.jhead .n small{font-family:var(--serif-en);font-style:italic;color:var(--muted);margin-left:6px;font-size:13px}
+.jhead input[type=date]{width:auto}
+.check{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap}
+.check input{width:18px;height:18px;accent-color:var(--ink)}
+.item{border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px;margin-bottom:10px}
+.item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.item-head .num{font-family:var(--serif-en);color:var(--muted);font-size:14px}
+.tabs{display:flex;gap:6px;margin:14px 0 10px}
+/* list */
+.search{margin:6px 0 14px}
+.crow{display:flex;align-items:center;gap:14px;padding:15px 16px;border:1px solid var(--line);background:var(--card);border-radius:14px;margin-bottom:10px;cursor:pointer}
+.crow:hover{border-color:var(--sand)}
+.avatar{flex:none;width:40px;height:40px;border-radius:50%;background:var(--sand);display:grid;place-items:center;font-family:var(--serif-zh);font-size:16px}
+.crow .info{flex:1;min-width:0}
+.crow .nm{font-size:15px}
+.crow .meta{font-size:12px;color:var(--muted);margin-top:2px}
+.pbar{display:flex;gap:3px;width:84px}
+.pbar span{flex:1;height:3px;border-radius:3px;background:var(--sand-soft)}
+.pbar span.d{background:var(--ink)}
+/* save bar */
+.savebar{position:fixed;left:0;right:0;bottom:0;background:rgba(247,246,242,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:12px 20px calc(12px + env(safe-area-inset-bottom));z-index:10}
+.savebar .in{max-width:820px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dirty{font-size:12px;color:var(--muted)}
+.dirty.on{color:var(--warn)}
+.msgbox{white-space:pre-wrap;font-size:13px;line-height:1.75;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;min-height:0;font-family:var(--sans)}
+.banner{padding:10px 14px;border-radius:12px;background:var(--sand-soft);font-size:12.5px;line-height:1.7;margin-top:6px}
+/* login */
+.login{max-width:380px;margin:12vh auto 0;padding:0 24px;text-align:center}
+.login .big{font-family:var(--serif-en);font-size:30px;letter-spacing:.32em;font-weight:500}
+.login form{text-align:left;margin-top:30px}
+.err{color:var(--warn);font-size:13px;min-height:20px;margin:6px 0}
+/* modal + toast */
+.modal{position:fixed;inset:0;background:rgba(30,30,30,.35);display:grid;place-items:center;z-index:30;padding:20px}
+.modal .box{background:var(--bg);border-radius:18px;padding:22px;max-width:360px;width:100%}
+.modal .box p{margin:8px 0 18px;line-height:1.7;font-size:14px}
+.modal .acts{display:flex;justify-content:flex-end;gap:8px}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);font-size:13px;padding:10px 18px;border-radius:999px;opacity:0;transition:.3s;pointer-events:none;z-index:40}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="s-login" class="login hidden">
+  <div class="big">THE ONEA</div>
+  <div class="eyebrow" style="margin-top:8px">Studio admin · 工作室后台</div>
+  <form id="login-form">
+    <div id="live-fields">
+      <div class="field"><label class="l">邮箱 Email</label><input id="a-email" type="email" autocomplete="username"></div>
+      <div class="field"><label class="l">密码 Password</label><input id="a-pw" type="password" autocomplete="current-password"></div>
+    </div>
+    <div id="demo-note" class="banner hidden">现在是<b>演示模式</b>：还没连接数据库，数据只保存在这个浏览器里。可以随意试用，正式上线前按说明连接 Supabase 即可。</div>
+    <div class="err" id="login-err"></div>
+    <button class="btn solid" style="width:100%;padding:13px" type="submit" id="login-btn">进入后台</button>
+  </form>
+</div>
+
+<!-- LIST -->
+<div id="s-list" class="wrap hidden">
+  <div class="top"><div class="wordmark">THE ONEA<small>后台</small></div><button class="btn solid" id="new-client">＋ 新客人</button></div>
+  <h1>客人档案</h1>
+  <p class="sub" id="list-count"></p>
+  <div id="demo-banner" class="banner hidden">演示模式：数据只存在这个浏览器。客人端用同一个浏览器打开就能看到你录入的内容。</div>
+  <div class="search"><input id="q" placeholder="搜索名字或手机号"></div>
+  <div id="clist"></div>
+  <div style="display:flex;gap:8px;margin-top:24px;flex-wrap:wrap">
+    <a class="btn ghost" href="index.html" target="_blank" rel="noopener">打开客人端</a>
+    <button class="btn ghost" id="reset-demo" hidden>重置演示数据</button>
+    <button class="btn ghost" id="signout" hidden>退出登录</button>
+  </div>
+</div>
+
+<!-- EDIT -->
+<div id="s-edit" class="wrap hidden">
+  <div class="top"><button class="btn ghost sm" id="back">← 客人列表</button><div class="eyebrow" id="edit-eyebrow"></div></div>
+  <div id="editor"></div>
+</div>
+<div class="savebar hidden" id="savebar"><div class="in">
+  <span class="dirty" id="dirty">已保存</span>
+  <div style="display:flex;gap:8px"><button class="btn warn sm" id="del">删除</button><button class="btn solid" id="save">保存</button></div>
+</div></div>
+
+<div id="modal" class="modal hidden"><div class="box"><h2 id="m-title"></h2><p id="m-text"></p><div class="acts"><button class="btn ghost sm" id="m-no">取消</button><button class="btn solid sm" id="m-yes">确定</button></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="store.js"></script>
+<script>
+const { CFG, LIVE, PRESETS, METRICS, JOURNEY, DB, blankData, normPhone, bi } = window.ONEA;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const toast = m => { const el=$("#toast"); el.textContent=m; el.classList.add("show"); clearTimeout(el._h); el._h=setTimeout(()=>el.classList.remove("show"),2000); };
+const fmtPhone = p => { p=normPhone(p); return p.length===10 ? `${p.slice(0,3)} ${p.slice(3,6)} ${p.slice(6)}` : p; };
+const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const addDays = (s, n) => { const d=new Date(s+"T12:00:00"); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+
+function ask(title, text, yes="确定"){
+  return new Promise(res=>{
+    $("#m-title").textContent=title; $("#m-text").textContent=text; $("#m-yes").textContent=yes;
+    $("#modal").classList.remove("hidden");
+    const done=v=>{ $("#modal").classList.add("hidden"); res(v); };
+    $("#m-yes").onclick=()=>done(true); $("#m-no").onclick=()=>done(false);
+  });
+}
+function show(id){ ["s-login","s-list","s-edit"].forEach(s=>$("#"+s).classList.toggle("hidden", s!==id)); $("#savebar").classList.toggle("hidden", id!=="s-edit"); window.scrollTo(0,0); }
+
+/* ========== AUTH ========== */
+let clients = [];
+async function start(){
+  if (!LIVE) { $("#live-fields").classList.add("hidden"); $("#demo-note").classList.remove("hidden"); show("s-login"); return; }
+  if (await DB.adminSession()) return openList();
+  show("s-login");
+}
+$("#login-form").onsubmit = async e => {
+  e.preventDefault();
+  $("#login-btn").disabled = true; $("#login-err").textContent = "";
+  const r = await DB.adminSignIn($("#a-email").value.trim(), $("#a-pw").value);
+  $("#login-btn").disabled = false;
+  if (!r.ok) { $("#login-err").textContent = r.error==="network" ? "网络连接失败，请稍后再试" : "邮箱或密码不正确"; return; }
+  openList();
+};
+$("#signout").onclick = async () => { await DB.adminSignOut(); show("s-login"); };
+$("#reset-demo").onclick = async () => { if (await ask("重置演示数据","会清空你在演示模式里录入的所有内容，恢复成示例客人 Mia。","重置")) { DB.resetDemo(); openList(); } };
+
+/* ========== LIST ========== */
+async function openList(){
+  try { clients = await DB.listClients(); }
+  catch(e){ toast("读取失败：" + (e.message||"网络问题")); clients = []; }
+  $("#demo-banner").classList.toggle("hidden", LIVE);
+  $("#reset-demo").hidden = LIVE; $("#signout").hidden = !LIVE;
+  renderList(); show("s-list");
+}
+function renderList(){
+  const q = $("#q").value.trim().toLowerCase(), qd = normPhone(q);
+  const rows = clients.filter(c => !q || c.name.toLowerCase().includes(q) || (qd && c.phone.includes(qd)));
+  $("#list-count").textContent = `共 ${clients.length} 位客人`;
+  $("#clist").innerHTML = rows.length ? rows.map(c=>{
+    const j = c.data?.journey || [], n = j.filter(x=>x.done).length;
+    const upd = c.updated_at ? new Date(c.updated_at).toLocaleDateString("zh-CN") : "";
+    return `<div class="crow" data-id="${esc(c.id)}"><div class="avatar">${esc((c.name||"?").slice(0,1))}</div>
+      <div class="info"><div class="nm">${esc(c.name)}</div><div class="meta">${fmtPhone(c.phone)} · 更新于 ${upd}</div></div>
+      <div><div class="pbar">${j.map(x=>`<span class="${x.done?'d':''}"></span>`).join("")}</div><div class="meta" style="text-align:right;margin-top:5px">旅程 ${n}/7</div></div></div>`;
+  }).join("") : `<p class="sub" style="padding:20px 0">${clients.length ? "没有找到匹配的客人" : "还没有客人，点右上角「新客人」开始。"}</p>`;
+}
+$("#q").oninput = renderList;
+$("#clist").onclick = e => { const r=e.target.closest(".crow"); if(r) openEdit(clients.find(c=>c.id===r.dataset.id)); };
+$("#new-client").onclick = () => openEdit(null);
+
+/* ========== EDITOR ========== */
+let cur = null, dirty = false;
+function setDirty(v){ dirty=v; const d=$("#dirty"); d.textContent = v ? "有未保存的修改" : "已保存"; d.classList.toggle("on", v); }
+function genCode(){ return String(Math.floor(100000 + Math.random()*900000)); }
+
+function openEdit(c){
+  if (c) { cur = clone(c); cur.data = Object.assign(blankData(), cur.data || {}); }
+  else cur = { name:"", phone:"", code:genCode(), data: blankData() };
+  // make sure structure is complete
+  const d = cur.data;
+  d.journey = JOURNEY.map((_,i)=> Object.assign({date:"",done:false,body:bi()}, d.journey?.[i]||{}));
+  METRICS.forEach(m => { d.metrics[m.key] = Object.assign({first:null,now:null}, d.metrics?.[m.key]||{}); });
+  d.ritual = Object.assign({am:[],pm:[]}, d.ritual||{});
+  d.note = Object.assign({text:bi(),date:""}, d.note||{});
+  $("#del").hidden = !cur.id;
+  renderEditor(); setDirty(false); show("s-edit");
+}
+
+const biField = (path, obj, {area=false, ph=["中文","English（可选）"]}={}) => {
+  const tag = area ? "textarea" : "input";
+  const v = k => esc(obj?.[k] || "");
+  return `<div class="bi">
+    <div class="tagz" data-l="中">${area?`<textarea data-p="${path}.zh" placeholder="${ph[0]}">${v("zh")}</textarea>`:`<input data-p="${path}.zh" value="${v("zh")}" placeholder="${ph[0]}">`}</div>
+    <div class="tagz" data-l="EN">${area?`<textarea data-p="${path}.en" placeholder="${ph[1]}">${v("en")}</textarea>`:`<input data-p="${path}.en" value="${v("en")}" placeholder="${ph[1]}">`}</div>
+  </div>`;
+};
+const opt = (group, val) => `<option value="">— 请选择 —</option>` + Object.entries(PRESETS[group]).map(([k,o])=>`<option value="${k}" ${k===val?"selected":""}>${o.zh} · ${o.en}</option>`).join("");
+
+function chipSection(group){
+  const arr = cur.data[group];
+  const presets = Object.entries(PRESETS[group]).map(([k,o])=>`<button type="button" class="chip ${arr.includes(k)?"on":""}" data-chip="${group}" data-key="${k}">${o.zh} · ${o.en}</button>`).join("");
+  const customs = arr.map((x,i)=> typeof x==="object" ? `<button type="button" class="chip custom" data-rmchip="${group}" data-i="${i}">${esc(x.zh||x.en)}${x.en&&x.zh?" · "+esc(x.en):""}<span class="x">×</span></button>` : "").join("");
+  return `<div class="chips">${presets}${customs}</div>
+    <div class="addrow"><input id="add-${group}-zh" placeholder="自定义（中文）"><input id="add-${group}-en" placeholder="English (optional)"><button type="button" class="btn ghost sm" data-addchip="${group}">＋ 添加</button></div>`;
+}
+
+function listItems(path, arr, kind){
+  return arr.map((it,i)=>`<div class="item">
+    <div class="item-head"><span class="num">${String(i+1).padStart(2,"0")}</span>
+      <span><button type="button" class="icon" data-act="up" data-list="${path}" data-i="${i}" title="上移">↑</button><button type="button" class="icon" data-act="down" data-list="${path}" data-i="${i}" title="下移">↓</button><button type="button" class="icon" data-act="del" data-list="${path}" data-i="${i}" title="删除">✕</button></span></div>
+    ${kind==="step" ? `<div class="field"><label class="l">步骤</label>${biField(`${path}.${i}.t`, it.t, {ph:["例：温和洁面","e.g. Gentle cleanser"]})}</div>
+      <label class="l">小提示（可选）</label>${biField(`${path}.${i}.s`, it.s, {ph:["例：按压吸收，不要搓","e.g. Press in, don't rub"]})}`
+    : `<div class="field" style="max-width:200px"><label class="l">日期</label><input type="date" data-p="${path}.${i}.date" value="${esc(it.date)}"></div>
+      <div class="field"><label class="l">项目</label>${biField(`${path}.${i}.name`, it.name, {ph:["例：屏障修护护理","e.g. Barrier ritual"]})}</div>
+      <label class="l">备注（可选）</label>${biField(`${path}.${i}.detail`, it.detail, {ph:["例：90 分钟","e.g. 90 min"]})}`}
+  </div>`).join("") + `<button type="button" class="btn ghost sm" data-act="add" data-list="${path}" data-kind="${kind}">＋ 添加${kind==="step"?"步骤":"记录"}</button>`;
+}
+
+function loginMsg(){
+  const url = CFG.appUrl || location.href.replace(/admin\.html.*$/,"");
+  const n = cur.name || "", p = fmtPhone(cur.phone), c = cur.code;
+  return `${n} 您好，您的 THE ONEA 皮肤档案已经开通 ✨\n打开：${url}\n手机号：${p}\n访问码：${c}\n建议添加到手机主屏幕，随时查看您的护肤步骤和皮肤旅程。\n\nHi ${n}, your THE ONEA skin profile is ready.\nOpen: ${url}\nPhone: ${p}\nAccess code: ${c}\nAdd it to your home screen to check your ritual and skin journey anytime.`;
+}
+
+function renderEditor(){
+  const d = cur.data;
+  $("#edit-eyebrow").textContent = cur.id ? "编辑档案" : "新客人";
+  $("#editor").innerHTML = `
+  <h1>${esc(cur.name) || "新客人"}</h1>
+
+  <div class="sec"><div class="sec-head"><h2>基本信息 · 登录</h2></div><div class="card">
+    <div class="grid2">
+      <div class="field"><label class="l">名字（客人端显示）</label><input data-p="name" value="${esc(cur.name)}" placeholder="例：Mia / 林小姐"></div>
+      <div class="field"><label class="l">建档日期</label><input type="date" data-p="data.since" value="${esc(d.since)}"></div>
+      <div class="field"><label class="l">手机号（登录用）</label><input data-p="phone" type="tel" value="${esc(fmtPhone(cur.phone))}" placeholder="519 555 0123"></div>
+      <div class="field"><label class="l">访问码（4–8 位数字）</label><div style="display:flex;gap:8px"><input data-p="code" inputmode="numeric" value="${esc(cur.code)}"><button type="button" class="btn ghost sm" id="regen">重新生成</button></div></div>
+    </div>
+    <label class="l" style="margin-top:6px">发给客人的开通消息（微信 / 短信）</label>
+    <div class="msgbox" id="msg">${esc(loginMsg())}</div>
+    <div style="margin-top:10px"><button type="button" class="btn ghost sm" id="copy-msg">复制消息</button></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head"><h2>皮肤概况</h2><span class="eyebrow">Overview</span></div><div class="card">
+    <div class="grid2">
+      <div class="field"><label class="l">肤质</label><select data-p="data.skinType">${opt("skinType", d.skinType)}</select></div>
+      <div class="field"><label class="l">敏感程度</label><select data-p="data.sensitivity">${opt("sensitivity", d.sensitivity)}</select></div>
+    </div>
+    <label class="l">当前目标</label>${biField("data.goal", d.goal, {ph:["例：稳定屏障 · 减少泛红","e.g. Calm the barrier"]})}
+  </div></div>
+
+  <div class="sec"><div class="sec-head"><h2>目前关注</h2><span class="eyebrow">Focus</span></div><div class="card">${chipSection("concerns")}</div></div>
+  <div class="sec"><div class="sec-head"><h2>暂时避开</h2><span class="eyebrow">Avoid</span></div><div class="card">${chipSection("avoid")}</div></div>
+
+  <div class="sec"><div class="sec-head"><h2>皮肤检测数据</h2><span class="eyebrow">0 – 100</span></div><div class="card">
+    <p class="sub" style="margin-bottom:8px">填 0–100 的分数。「最近一次」留空，这一项就不在客人端显示。</p>
+    <div class="metric-row" style="border-bottom:1px solid var(--line)"><span class="l"></span><span class="l" style="font-size:12px;color:var(--muted)">首次检测</span><span class="l" style="font-size:12px;color:var(--muted)">最近一次</span></div>
+    ${METRICS.map(m=>`<div class="metric-row"><div class="lbl">${m.zh}<small>${m.en}${m.lower?" · 越低越好":""}</small></div>
+      <input type="number" min="0" max="100" data-num data-p="data.metrics.${m.key}.first" value="${d.metrics[m.key].first ?? ""}">
+      <input type="number" min="0" max="100" data-num data-p="data.metrics.${m.key}.now" value="${d.metrics[m.key].now ?? ""}"></div>`).join("")}
+  </div></div>
+
+  <div class="sec"><div class="sec-head"><h2>Skin Journey 七个节点</h2><button type="button" class="btn ghost sm" id="autodate">按「到店护理」日期自动排期</button></div>
+    <p class="sub" style="margin-top:6px">勾选「已完成」后，客人端会自动跳到下一站。自动排期：30 天 / 90 天 / 6 个月都从到店护理那天算起。</p>
+    <div class="card">${JOURNEY.map((s,i)=>`<div class="jrow">
+      <div class="jhead"><span class="n">${i+1}. ${s.zh}<small>${s.en}</small></span>
+        <input type="date" data-p="data.journey.${i}.date" value="${esc(d.journey[i].date)}">
+        <label class="check"><input type="checkbox" data-p="data.journey.${i}.done" ${d.journey[i].done?"checked":""}>已完成</label></div>
+      ${biField(`data.journey.${i}.body`, d.journey[i].body, {area:true, ph:["这一站的说明 / 结论（客人可见）","Notes for the client (optional)"]})}
+    </div>`).join("")}</div>
+  </div>
+
+  <div class="sec"><div class="sec-head"><h2>居家仪式</h2><span class="eyebrow">At-home ritual</span></div><div class="card">
+    <div class="tabs"><span class="eyebrow" style="align-self:center">早 AM</span></div>
+    ${listItems("data.ritual.am", d.ritual.am, "step")}
+    <div class="tabs" style="margin-top:22px"><span class="eyebrow" style="align-self:center">晚 PM</span></div>
+    ${listItems("data.ritual.pm", d.ritual.pm, "step")}
+    <div style="margin-top:22px"><label class="l">每周额外护理（可选）</label>${biField("data.weekly", d.weekly, {area:true, ph:["例：每周三、周日晚加一次舒缓面膜","e.g. Soothing mask Wed & Sun evenings"]})}</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head"><h2>护理师留言</h2><span class="eyebrow">Note</span></div><div class="card">
+    ${biField("data.note.text", d.note.text, {area:true, ph:["给客人的一段话，显示在「今日」页","A note shown on the client's Today page"]})}
+    <div class="field" style="max-width:200px;margin-top:10px"><label class="l">留言日期</label><input type="date" data-p="data.note.date" value="${esc(d.note.date)}"></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head"><h2>护理记录</h2><span class="eyebrow">History</span></div><div class="card">
+    ${listItems("data.history", d.history, "hist")}
+  </div></div>
+  <p class="sub" style="margin-top:20px">英文栏可以留空，客人切换到英文时会显示中文内容。</p>`;
+}
+
+/* path helpers */
+function getPath(o, p){ return p.split(".").reduce((a,k)=>a?.[k], o); }
+function setPath(o, p, v){
+  const ks=p.split("."); let a=o;
+  ks.slice(0,-1).forEach((k,i)=>{ if(a[k]==null) a[k] = /^\d+$/.test(ks[i+1]) ? [] : {}; a=a[k]; });
+  a[ks.at(-1)] = v;
+}
+$("#editor").addEventListener("input", onField);
+$("#editor").addEventListener("change", onField);
+function onField(e){
+  const el=e.target, p=el.dataset.p; if(!p) return;
+  let v = el.type==="checkbox" ? el.checked : el.value;
+  if (el.hasAttribute("data-num")) v = v==="" ? null : Math.max(0, Math.min(100, Number(v)));
+  if (p==="phone") v = normPhone(v);
+  if (p==="code") v = String(v).replace(/\D/g,"").slice(0,8);
+  setPath(cur, p, v); setDirty(true);
+  if (["name","phone","code"].includes(p)) $("#msg").textContent = loginMsg();
+}
+
+$("#editor").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if(!b) return;
+  const d = cur.data;
+  if (b.id==="regen") { cur.code=genCode(); renderEditor(); setDirty(true); return; }
+  if (b.id==="copy-msg") {
+    try { await navigator.clipboard.writeText(loginMsg()); toast("已复制，可以直接粘贴到微信"); }
+    catch(err){ const r=document.createRange(); r.selectNodeContents($("#msg")); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast("已选中文字，请长按复制"); }
+    return;
+  }
+  if (b.id==="autodate") {
+    const base = d.journey[2].date || d.journey[0].date;
+    if (!base) { toast("先填「到店护理」或「皮肤分析」的日期"); return; }
+    const a = d.journey[0].date || base;
+    const plan = { 0:a, 1:d.journey[1].date||a, 2:base, 3:d.journey[3].date||base, 4:addDays(base,30), 5:addDays(base,90), 6:addDays(base,182) };
+    d.journey.forEach((j,i)=>{ if(!j.date || i>=4) j.date = plan[i]; });
+    renderEditor(); setDirty(true); toast("已排好日期，可以再手动调整"); return;
+  }
+  if (b.dataset.chip) {
+    const arr = d[b.dataset.chip], k = b.dataset.key, i = arr.indexOf(k);
+    i>-1 ? arr.splice(i,1) : arr.push(k); b.classList.toggle("on"); setDirty(true); return;
+  }
+  if (b.dataset.rmchip) { d[b.dataset.rmchip].splice(+b.dataset.i,1); renderEditor(); setDirty(true); return; }
+  if (b.dataset.addchip) {
+    const g=b.dataset.addchip, zh=$(`#add-${g}-zh`).value.trim(), en=$(`#add-${g}-en`).value.trim();
+    if (!zh && !en) return; d[g].push({zh,en}); renderEditor(); setDirty(true); return;
+  }
+  if (b.dataset.act) {
+    const arr = getPath(cur, b.dataset.list), i = +b.dataset.i;
+    if (b.dataset.act==="add") arr.push(b.dataset.kind==="step" ? {t:bi(),s:bi()} : {date:todayStr(),name:bi(),detail:bi()});
+    if (b.dataset.act==="del") arr.splice(i,1);
+    if (b.dataset.act==="up" && i>0) [arr[i-1],arr[i]]=[arr[i],arr[i-1]];
+    if (b.dataset.act==="down" && i<arr.length-1) [arr[i+1],arr[i]]=[arr[i],arr[i+1]];
+    const y = scrollY; renderEditor(); scrollTo(0,y); setDirty(true);
+  }
+});
+
+$("#save").onclick = async () => {
+  cur.name = (cur.name||"").trim(); cur.phone = normPhone(cur.phone);
+  if (!cur.name) return toast("请填写名字");
+  if (cur.phone.length !== 10) return toast("手机号需要 10 位数字");
+  if (!/^\d{4,8}$/.test(cur.code)) return toast("访问码需要 4–8 位数字");
+  if (clients.some(c => c.phone===cur.phone && c.id!==cur.id)) return toast("这个手机号已经有档案了");
+  // drop empty list rows
+  const d = cur.data;
+  ["am","pm"].forEach(k => d.ritual[k] = d.ritual[k].filter(s => s.t?.zh || s.t?.en));
+  d.history = d.history.filter(h => h.name?.zh || h.name?.en);
+  $("#save").disabled = true;
+  try {
+    const saved = await DB.saveClient(cur);
+    cur.id = saved.id; cur.updated_at = saved.updated_at;
+    const i = clients.findIndex(c=>c.id===saved.id); i>-1 ? clients[i]=clone(cur) : clients.unshift(clone(cur));
+    $("#del").hidden = false; renderEditor(); setDirty(false); toast("已保存，客人端刷新即可看到");
+  } catch(err) {
+    toast(String(err.message||"").includes("duplicate") ? "这个手机号已经有档案了" : "保存失败：" + (err.message||"网络问题"));
+  }
+  $("#save").disabled = false;
+};
+$("#del").onclick = async () => {
+  if (!cur.id) return;
+  if (!(await ask("删除这位客人？", `${cur.name} 的档案会被永久删除，客人也将无法再登录。`, "删除"))) return;
+  try { await DB.deleteClient(cur.id); toast("已删除"); setDirty(false); openList(); }
+  catch(err){ toast("删除失败：" + (err.message||"")); }
+};
+$("#back").onclick = async () => {
+  if (dirty && !(await ask("还没保存", "离开后这次的修改会丢失。", "不保存，离开"))) return;
+  setDirty(false); openList();
+};
+
+start();
+</script>
+</body>
+</html>
