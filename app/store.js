@@ -225,6 +225,44 @@
     },
     resetDemo() { memDB = seed(); demoSave(); },
 
+    /* ---------- 预约（仅后台可读写） ---------- */
+    async listBookings(fromISO) {
+      if (!LIVE) { try { return JSON.parse(localStorage.getItem("onea:demo-bookings") || "[]").filter(b => Date.parse(b.end_at) >= Date.parse(fromISO)).sort((a,b)=>Date.parse(a.start_at)-Date.parse(b.start_at)); } catch (e) { return []; } }
+      const db = await sb();
+      try { await db.rpc("expire_bookings"); } catch (e) {}
+      const { data, error } = await db.from("bookings").select("*").gte("end_at", fromISO).order("start_at", { ascending: true }).limit(500);
+      if (error) throw error;
+      return data;
+    },
+    async updateBooking(id, patch) {
+      if (!LIVE) {
+        const all = JSON.parse(localStorage.getItem("onea:demo-bookings") || "[]"); const b = all.find(x => x.id === id); Object.assign(b, patch);
+        localStorage.setItem("onea:demo-bookings", JSON.stringify(all)); return b;
+      }
+      const db = await sb();
+      const { data, error } = await db.from("bookings").update(patch).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    async addBlock(startISO, endISO, note) {
+      const row = { ref: "BLOCK-" + Math.random().toString(36).slice(2,7).toUpperCase(), status: "blocked", name: note || "占用", phone: "-",
+                    items: [], total_min: 0, total_price: 0, start_at: startISO, end_at: endISO, block_end: endISO };
+      if (!LIVE) {
+        const all = JSON.parse(localStorage.getItem("onea:demo-bookings") || "[]"); row.id = "b" + Date.now(); all.push(row);
+        localStorage.setItem("onea:demo-bookings", JSON.stringify(all)); return row;
+      }
+      const db = await sb();
+      const { data, error } = await db.from("bookings").insert(row).select().single();
+      if (error) throw error;
+      return data;
+    },
+    async deleteBooking(id) {
+      if (!LIVE) { const all = JSON.parse(localStorage.getItem("onea:demo-bookings") || "[]").filter(x => x.id !== id); localStorage.setItem("onea:demo-bookings", JSON.stringify(all)); return; }
+      const db = await sb();
+      const { error } = await db.from("bookings").delete().eq("id", id);
+      if (error) throw error;
+    },
+
     /* ---------- 到店前问卷（仅后台可读） ---------- */
     async listIntakes() {
       if (!LIVE) { try { return JSON.parse(localStorage.getItem("onea:demo-intake") || "[]"); } catch (e) { return []; } }

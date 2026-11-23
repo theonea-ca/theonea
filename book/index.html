@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F7F6F2">
+<title>The ONEA · 预约 Book</title>
+<link rel="icon" href="../app/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Italiana&family=Jost:wght@300;400&family=Noto+Serif+SC:wght@300;400;500&display=swap">
+<style>
+:root{--bg:#F7F6F2;--card:#FBFAF7;--sand:#D9D2C4;--line:#E4DED2;--soft:#EFEBE3;--ink:#1E1E1E;--mute:#6b665c;--warm:#A27B55;--err:#A0533F;
+  --serif:"Noto Serif SC","Songti SC",Georgia,serif;--disp:"Italiana","Cormorant Garamond",Georgia,serif;--sans:"Jost","Helvetica Neue",system-ui,sans-serif;color-scheme:light}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:300 15px/1.7 var(--serif);-webkit-text-size-adjust:100%}
+html[data-lang=zh] .en,html[data-lang=en] .zh{display:none!important}
+.w{max-width:620px;margin:0 auto;padding:0 20px 150px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 16px) 0 10px}
+.logo{font:400 15px var(--sans);letter-spacing:.34em}
+.lang{font:400 12px var(--sans);letter-spacing:.08em;background:none;border:1px solid var(--sand);border-radius:99px;padding:6px 13px;color:var(--ink);cursor:pointer}
+.steps{display:flex;gap:6px;margin:18px 0 26px}
+.steps span{flex:1;height:3px;border-radius:3px;background:var(--line)}
+.steps span.on{background:var(--ink)}
+h1{font:400 27px/1.35 var(--serif);letter-spacing:.06em;margin:0 0 6px}
+html[data-lang=en] h1{font:400 34px/1.2 var(--disp)}
+.lead{color:var(--mute);font-size:14px;margin:0 0 22px}
+.hidden{display:none!important}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:400 14px var(--sans);letter-spacing:.08em;padding:14px 22px;border-radius:99px;background:var(--ink);color:var(--bg);text-decoration:none;border:1px solid var(--ink);cursor:pointer}
+.btn.o{background:transparent;color:var(--ink)}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.sm{padding:8px 14px;font-size:12.5px}
+.link{background:none;border:0;font:400 13px var(--sans);color:var(--mute);text-decoration:underline;cursor:pointer;padding:0}
+
+/* services */
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin:0 -20px 16px;padding-left:20px;padding-right:20px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;font:400 13px var(--sans);letter-spacing:.04em;border:1px solid var(--line);background:#fff;border-radius:99px;padding:8px 15px;cursor:pointer;color:var(--ink)}
+.tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--warm);margin-left:6px;vertical-align:middle}
+.catnote{font:300 12.5px/1.7 var(--sans);color:var(--mute);background:var(--soft);border-radius:10px;padding:10px 13px;margin-bottom:12px}
+.svc{display:grid;grid-template-columns:1fr auto;gap:4px 14px;padding:16px;border:1px solid var(--line);background:var(--card);border-radius:14px;margin-bottom:10px;cursor:pointer;transition:.15s}
+.svc.on{border-color:var(--ink);background:#fff;box-shadow:inset 0 0 0 1px var(--ink)}
+.svc .n{font:400 16px/1.45 var(--serif)}
+html[data-lang=en] .svc .n{font-family:var(--disp);font-size:19px}
+.svc .p{font:400 16px var(--sans);text-align:right;white-space:nowrap}
+.svc .d{font:300 12.5px/1.6 var(--sans);color:var(--mute);grid-column:1/-1}
+.svc .m{font:300 12.5px var(--sans);color:var(--mute);text-align:right}
+.svc .tag{display:inline-block;font:400 11px var(--sans);color:var(--warm);border:1px solid #e2d3c3;border-radius:99px;padding:1px 8px;margin-top:4px}
+.svc .p s{color:var(--mute);font-size:13px;margin-right:4px}
+
+/* date & time */
+.days{display:flex;gap:8px;overflow-x:auto;margin:0 -20px 18px;padding:2px 20px 8px;scrollbar-width:none}
+.days::-webkit-scrollbar{display:none}
+.day{flex:none;width:62px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 0;text-align:center;cursor:pointer;font-family:var(--sans)}
+.day .wd{font-size:11.5px;color:var(--mute);letter-spacing:.06em}
+.day .dd{font-size:20px;line-height:1.3}
+.day .mo{font-size:10.5px;color:var(--mute)}
+.day.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.day.on .wd,.day.on .mo{color:#cfc9bd}
+.day.off{opacity:.35;cursor:default}
+.times{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:380px){.times{grid-template-columns:repeat(3,1fr)}}
+.time{font:400 14px var(--sans);border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 0;text-align:center;cursor:pointer;color:var(--ink)}
+.time.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.empty{font:300 13.5px/1.7 var(--sans);color:var(--mute);padding:18px;text-align:center;background:var(--card);border:1px dashed var(--sand);border-radius:14px}
+.daytitle{font:400 14px var(--sans);letter-spacing:.04em;margin:0 0 10px}
+
+/* form */
+.f{margin-bottom:16px}
+.f label{display:block;font:400 13px var(--sans);color:var(--mute);margin-bottom:6px}
+.f label i{color:var(--err);font-style:normal}
+.f input,.f textarea{width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;padding:12px 14px;font:300 15px var(--sans);color:var(--ink);outline:none}
+.f input:focus,.f textarea:focus{border-color:var(--ink)}
+.f textarea{min-height:72px;resize:vertical}
+.f.bad input{border-color:var(--err)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:420px){.row2{grid-template-columns:1fr}}
+.summary{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:22px;font-family:var(--sans)}
+.summary .when{font:400 16px/1.5 var(--serif);margin-bottom:8px}
+.summary .li{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:#3c3934;padding:3px 0}
+.summary .tot{display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:8px;padding-top:8px;font-size:14px}
+.policy{font:300 12.5px/1.75 var(--sans);color:var(--mute);background:var(--soft);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.agree{display:flex;gap:10px;align-items:flex-start;font:300 13.5px/1.6 var(--sans);cursor:pointer}
+.agree input{margin-top:3px;width:17px;height:17px;accent-color:var(--ink);flex:none}
+.err{color:var(--err);font:400 13px var(--sans);margin:10px 0 0;min-height:1em}
+
+/* bottom bar */
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(247,246,242,.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:12px 20px calc(12px + env(safe-area-inset-bottom));z-index:10}
+.bar .in{max-width:620px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.bar .info{font:300 13px/1.5 var(--sans);color:var(--mute)}
+.bar .info b{display:block;font-weight:400;font-size:15px;color:var(--ink)}
+
+/* done */
+.done{text-align:center;padding-top:10px}
+.ref{font:400 28px var(--sans);letter-spacing:.12em;margin:6px 0 4px}
+.pay{text-align:left;background:#fff;border:1px solid var(--ink);border-radius:18px;padding:20px;margin:22px 0}
+.pay h3{font:500 16px var(--serif);margin:0 0 10px}
+.pay .amt{font:400 30px var(--sans);margin:2px 0 10px}
+.pay .kv{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding:10px 0;font:300 14px var(--sans)}
+.pay .kv b{font-weight:400;word-break:break-all}
+.pay .due{font:400 13.5px/1.7 var(--sans);color:var(--err);margin-top:6px}
+.next{display:grid;gap:10px;margin-top:8px}
+#toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);font:400 13px var(--sans);padding:10px 18px;border-radius:99px;opacity:0;transition:.3s;pointer-events:none;z-index:40}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+.loading{font:300 13.5px var(--sans);color:var(--mute);padding:30px 0;text-align:center}
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="top"><a href="https://theonea.ca" class="logo" style="color:inherit;text-decoration:none">THE ONEA</a><button class="lang" id="lt" type="button">EN</button></div>
+  <div class="steps" id="steps"><span></span><span></span><span></span><span></span></div>
+
+  <!-- STEP 1 -->
+  <div id="s1">
+    <h1><span class="zh">选择护理</span><span class="en">Choose your ritual</span></h1>
+    <p class="lead"><span class="zh">不确定选哪个？第一次来建议选「新客皮肤初见」，我们先看皮肤再定方案。</span><span class="en">Not sure? First-time guests start with the First Visit Skin Ritual — skin first, treatment second.</span></p>
+    <div class="tabs" id="tabs"></div>
+    <div id="catnote"></div>
+    <div id="svcs"><div class="loading"><span class="zh">读取中…</span><span class="en">Loading…</span></div></div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="s2" class="hidden">
+    <h1><span class="zh">选择时间</span><span class="en">Pick a time</span></h1>
+    <p class="lead"><span class="zh">以下都是多伦多当地时间。</span><span class="en">All times are local (Toronto) time.</span></p>
+    <div class="days" id="days"></div>
+    <div class="daytitle" id="daytitle"></div>
+    <div id="times"></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div id="s3" class="hidden">
+    <h1><span class="zh">填写资料</span><span class="en">Your details</span></h1>
+    <p class="lead"><span class="zh">只用于预约联系。</span><span class="en">Used only to arrange your visit.</span></p>
+    <div class="summary" id="sum3"></div>
+    <div class="f" data-k="name"><label><span class="zh">姓名</span><span class="en">Name</span> <i>*</i></label><input id="i-name" autocomplete="name"></div>
+    <div class="f" data-k="phone"><label><span class="zh">手机号</span><span class="en">Phone</span> <i>*</i></label><input id="i-phone" type="tel" autocomplete="tel" placeholder="519 555 0123"></div>
+    <div class="row2">
+      <div class="f"><label><span class="zh">微信号（选填）</span><span class="en">WeChat ID (optional)</span></label><input id="i-wechat"></div>
+      <div class="f"><label><span class="zh">邮箱（选填）</span><span class="en">Email (optional)</span></label><input id="i-email" type="email" autocomplete="email"></div>
+    </div>
+    <div class="f"><label><span class="zh">备注（选填）</span><span class="en">Notes (optional)</span></label><textarea id="i-note"></textarea></div>
+    <div class="policy" id="policy"></div>
+    <label class="agree"><input type="checkbox" id="i-agree"><span><span class="zh">我已了解订金与改期规则。</span><span class="en">I understand the deposit and cancellation policy.</span></span></label>
+    <p class="err" id="err3"></p>
+  </div>
+
+  <!-- STEP 4 -->
+  <div id="s4" class="hidden">
+    <div class="done">
+      <div style="font:400 11px var(--sans);letter-spacing:.3em;color:var(--mute)">BOOKING NUMBER</div>
+      <div class="ref" id="ref"></div>
+      <p class="lead" style="margin:0"><span class="zh">时段已为你保留，付完订金即完成预约。</span><span class="en">Your time is on hold — pay the deposit to complete your booking.</span></p>
+    </div>
+    <div class="pay" id="pay"></div>
+    <div class="summary" id="sum4"></div>
+    <div class="next">
+      <a class="btn" href="../intake.html"><span class="zh">填写到店前问卷</span><span class="en">Fill in the pre-visit form</span></a>
+      <a class="btn o" href="../guide/"><span class="zh">查看到店指南</span><span class="en">View visit guide</span></a>
+    </div>
+  </div>
+</div>
+
+<div class="bar" id="bar"><div class="in">
+  <div class="info" id="barinfo"></div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <button class="link hidden" id="back" type="button"><span class="zh">上一步</span><span class="en">Back</span></button>
+    <button class="btn" id="next" type="button" disabled><span class="zh">下一步</span><span class="en">Next</span></button>
+  </div>
+</div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="../app/config.js"></script>
+<script>
+(function(){
+const CFG = window.ONEA_CONFIG || {};
+const TZ = "America/Toronto", BUFFER = 30, STEP = 30, MIN_NOTICE_H = 2, DAYS_AHEAD = 60;
+const HOURS = {2:["11:00","19:00"],3:["11:00","19:00"],4:["11:00","19:00"],5:["10:00","20:00"],6:["10:00","20:00"],7:["10:00","20:00"]}; // ISO 周几，周一休息
+const DEPOSIT = CFG.depositAmount || 30;
+const NOTIFY_URL = "https://theoneavisitguide.netlify.app/";
+const CATS = [
+  {k:"facial", zh:"面部护理", en:"Facials", cats:["first","facial"], note:null},
+  {k:"addon", zh:"加选护理", en:"Add-ons", cats:["addon"], note:{zh:"可单独预约；搭配面部护理每项立减 $10。",en:"Book on its own, or add to any facial for $10 off each."}},
+  {k:"ipl", zh:"超光子", en:"Super IPL", cats:["ipl"], note:{zh:"先评估再护理，可安排肤测试。第一次做建议先预约「新客皮肤初见」。时长为参考时间，实际通常更短。",en:"Assessment first; patch test available. First-timers, consider the First Visit ritual. Times are estimates — sessions are usually shorter."}},
+  {k:"dpl", zh:"DPL 脱毛", en:"DPL hair removal", cats:["dpl"], note:{zh:"可同时选多个部位。价格包含双侧（如适用）。时长为参考时间，实际通常更短。6 次疗程买 5 送 1，请到店咨询。",en:"Select several areas if you like. Prices include both sides. Times are estimates — sessions are usually shorter. 6-session series (buy 5, get 1) — ask in studio."}},
+  {k:"body", zh:"身体护理", en:"Body care", cats:["body"], note:{zh:"仅限女性客户。",en:"Female clients only."}},
+];
+
+const $ = s => document.querySelector(s);
+const h = document.documentElement;
+let L = "zh";
+const bi = (zh,en) => `<span class="zh">${zh}</span><span class="en">${en}</span>`;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = n => "$" + (Math.round(n*100)/100).toString().replace(/\.0+$/,"");
+const toast = m => { const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2400); };
+
+/* ---------- 语言 ---------- */
+function setLang(l){ L=l; h.setAttribute("data-lang",l); h.lang=l==="zh"?"zh-CN":"en"; $("#lt").textContent=l==="zh"?"EN":"中文"; try{localStorage.setItem("onea-lang",l)}catch(e){} renderBar(); if(state.step===2) renderTimes(); }
+$("#lt").onclick = () => setLang(L==="zh"?"en":"zh");
+
+/* ---------- 多伦多时间工具 ---------- */
+const fmtParts = new Intl.DateTimeFormat("en-US",{timeZone:TZ,hourCycle:"h23",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",weekday:"short"});
+function parts(ts){ const o={}; fmtParts.formatToParts(new Date(ts)).forEach(p=>o[p.type]=p.value); return {y:+o.year,m:+o.month,d:+o.day,H:+o.hour,M:+o.minute,S:+o.second,wd:o.weekday}; }
+function offsetAt(ts){ const p=parts(ts); return Date.UTC(p.y,p.m-1,p.d,p.H,p.M,p.S) - Math.floor(ts/1000)*1000; }
+function zoned(y,m,d,H,M){ const g=Date.UTC(y,m-1,d,H,M); let t=g-offsetAt(g); t=g-offsetAt(t); return t; }
+const ISO_WD = {Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:7};
+const WD_ZH = ["","周一","周二","周三","周四","周五","周六","周日"], WD_EN = ["","Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const pad = n => String(n).padStart(2,"0");
+function whenText(ts, lang){
+  const p=parts(ts), w=ISO_WD[p.wd];
+  return lang==="en" ? `${WD_EN[w]}, ${new Date(ts).toLocaleDateString("en-CA",{timeZone:TZ,month:"short",day:"numeric"})} · ${pad(p.H)}:${pad(p.M)}`
+                     : `${p.m}月${p.d}日 ${WD_ZH[w]} ${pad(p.H)}:${pad(p.M)}`;
+}
+
+/* ---------- 数据 ---------- */
+const api = (path, body) => fetch(CFG.supabaseUrl + "/rest/v1/" + path, {
+  method: body ? "POST" : "GET",
+  headers: { apikey: CFG.supabaseAnonKey, "Content-Type": "application/json" },
+  body: body ? JSON.stringify(body) : undefined
+}).then(async r => { const j = await r.json().catch(()=>null); if(!r.ok) throw new Error((j&&j.message)||r.status); return j; });
+
+const state = { step:1, services:[], sel:[], tab:"facial", busy:[], day:null, start:null, booking:null };
+
+/* ---------- STEP 1 ---------- */
+const hasFacial = () => state.sel.some(id => ["first","facial"].includes(svc(id).cat));
+const svc = id => state.services.find(s=>s.id===id);
+const priceOf = s => s.cat==="addon" && hasFacial() ? Number(s.price)-10 : Number(s.price);
+const totals = () => state.sel.reduce((a,id)=>{ const s=svc(id); a.min+=s.minutes; a.price+=priceOf(s); a.from = a.from || s.price_from; return a; }, {min:0,price:0,from:false});
+
+function renderTabs(){
+  $("#tabs").innerHTML = CATS.map(c => {
+    const n = state.sel.filter(id=>c.cats.includes(svc(id)?.cat)).length;
+    return `<button type="button" class="tab ${state.tab===c.k?"on":""}" data-tab="${c.k}">${bi(c.zh,c.en)}${n?'<span class="dot"></span>':""}</button>`;
+  }).join("");
+  const c = CATS.find(c=>c.k===state.tab);
+  $("#catnote").innerHTML = c.note ? `<div class="catnote">${bi(c.note.zh,c.note.en)}</div>` : "";
+}
+function renderSvcs(){
+  const c = CATS.find(c=>c.k===state.tab);
+  const list = state.services.filter(s=>c.cats.includes(s.cat));
+  $("#svcs").innerHTML = list.map(s => {
+    const on = state.sel.includes(s.id), p = priceOf(s), disc = p !== Number(s.price);
+    return `<div class="svc ${on?"on":""}" data-id="${esc(s.id)}" role="button" tabindex="0" aria-pressed="${on}">
+      <div class="n">${bi(esc(s.name_zh),esc(s.name_en))}</div>
+      <div class="p">${disc?`<s>${money(s.price)}</s>`:""}${money(p)}${s.price_from?"+":""}</div>
+      ${s.desc_zh||s.desc_en?`<div class="d">${bi(esc(s.desc_zh||s.desc_en),esc(s.desc_en||s.desc_zh))}</div>`:""}
+      <div class="d" style="grid-column:auto">${s.note_zh?`<span class="tag">${bi(esc(s.note_zh),esc(s.note_en||s.note_zh))}</span>`:""}</div>
+      <div class="m">${["ipl","dpl"].includes(s.cat) ? bi(`参考 ${s.minutes} min`,`~${s.minutes} min`) : `${s.minutes} min`}</div>
+    </div>`;
+  }).join("") || `<div class="empty">${bi("暂无可预约项目","Nothing available here yet")}</div>`;
+}
+$("#tabs").onclick = e => { const b=e.target.closest("[data-tab]"); if(!b) return; state.tab=b.dataset.tab; renderTabs(); renderSvcs(); };
+$("#svcs").onclick = e => {
+  const el = e.target.closest(".svc"); if(!el) return;
+  const id = el.dataset.id, s = svc(id), i = state.sel.indexOf(id);
+  if (i>-1) state.sel.splice(i,1);
+  else {
+    if (["first","facial"].includes(s.cat)) state.sel = state.sel.filter(x=>!["first","facial"].includes(svc(x).cat)); // 一次一个面部护理
+    if (state.sel.length >= 6) return toast(L==="zh"?"一次最多选 6 项":"Up to 6 items per visit");
+    if (totals().min + s.minutes > 300) return toast(L==="zh"?"总时长太长了，请分两次预约":"That's too long for one visit — please book twice");
+    state.sel.push(id);
+  }
+  state.start = null; renderTabs(); renderSvcs(); renderBar();
+};
+$("#svcs").onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); e.target.click(); } };
+
+/* ---------- STEP 2 ---------- */
+function dayList(){
+  const now = Date.now(), p0 = parts(now), out = [];
+  for (let i=0;i<=DAYS_AHEAD;i++){
+    const t = zoned(p0.y,p0.m,p0.d+i,12,0), p = parts(t), w = ISO_WD[p.wd];
+    out.push({y:p.y,m:p.m,d:p.d,w,key:`${p.y}-${pad(p.m)}-${pad(p.d)}`});
+  }
+  return out;
+}
+function slotsFor(day){
+  const hr = HOURS[day.w]; if(!hr) return [];
+  const [oh,om] = hr[0].split(":").map(Number), [ch,cm] = hr[1].split(":").map(Number);
+  const tot = totals().min, earliest = Date.now() + MIN_NOTICE_H*3600e3, out = [];
+  for (let m = oh*60+om; m <= ch*60+cm; m += STEP){
+    const s = zoned(day.y,day.m,day.d,Math.floor(m/60),m%60), e = s + (tot+BUFFER)*60e3;
+    if (s < earliest) continue;
+    if (state.busy.some(b => b.s < e && b.e > s)) continue;
+    out.push(s);
+  }
+  return out;
+}
+async function loadBusy(){
+  const from = new Date(Date.now()).toISOString(), to = new Date(Date.now()+(DAYS_AHEAD+2)*864e5).toISOString();
+  const rows = await api("rpc/get_busy", {p_from:from, p_to:to});
+  state.busy = (rows||[]).map(r=>({s:Date.parse(r.s), e:Date.parse(r.e)}));
+}
+let DAYS = [];
+function renderDays(){
+  DAYS = dayList();
+  if (!state.day || !DAYS.find(d=>d.key===state.day)) { const first = DAYS.find(d=>slotsFor(d).length); state.day = first ? first.key : DAYS[0].key; }
+  $("#days").innerHTML = DAYS.map(d => {
+    const n = slotsFor(d).length, mo = L==="en" ? new Date(zoned(d.y,d.m,d.d,12,0)).toLocaleDateString("en-CA",{timeZone:TZ,month:"short"}) : `${d.m}月`;
+    return `<div class="day ${state.day===d.key?"on":""} ${n?"":"off"}" data-day="${d.key}"><div class="wd">${L==="en"?WD_EN[d.w]:WD_ZH[d.w]}</div><div class="dd">${d.d}</div><div class="mo">${mo}</div></div>`;
+  }).join("");
+  const on = $("#days .day.on"); if (on) on.scrollIntoView({inline:"center",block:"nearest"});
+}
+function renderTimes(){
+  renderDays();
+  const d = DAYS.find(x=>x.key===state.day), sl = d ? slotsFor(d) : [];
+  $("#daytitle").textContent = d ? (L==="en" ? new Date(zoned(d.y,d.m,d.d,12,0)).toLocaleDateString("en-CA",{timeZone:TZ,weekday:"long",month:"long",day:"numeric"}) : `${d.m}月${d.d}日 ${WD_ZH[d.w]}`) : "";
+  if (!sl.length) {
+    $("#times").innerHTML = `<div class="empty">${d && d.w===1 ? bi("周一休息","Closed on Mondays") : bi("这一天已约满，请选其他日期。","Fully booked — please choose another day.")}</div>`;
+  } else {
+    $("#times").innerHTML = `<div class="times">${sl.map(s=>{ const p=parts(s); return `<button type="button" class="time ${state.start===s?"on":""}" data-t="${s}">${pad(p.H)}:${pad(p.M)}</button>`; }).join("")}</div>`;
+  }
+  renderBar();
+}
+$("#days").onclick = e => { const d=e.target.closest(".day"); if(!d||d.classList.contains("off")) return; state.day=d.dataset.day; state.start=null; renderTimes(); };
+$("#times").onclick = e => { const b=e.target.closest(".time"); if(!b) return; state.start=+b.dataset.t; renderTimes(); };
+
+/* ---------- STEP 3 ---------- */
+function summaryHTML(){
+  const t = totals();
+  return `<div class="when">${state.start ? bi(whenText(state.start,"zh"), whenText(state.start,"en")) : ""}</div>
+    ${state.sel.map(id=>{ const s=svc(id); return `<div class="li"><span>${bi(esc(s.name_zh),esc(s.name_en))}</span><span>${money(priceOf(s))}${s.price_from?"+":""}</span></div>`; }).join("")}
+    <div class="tot"><span>${bi(`约 ${t.min} 分钟`,`About ${t.min} min`)}</span><span>${bi("合计","Total")} ${money(t.price)}${t.from?"+":""}</span></div>`;
+}
+function renderStep3(){
+  $("#sum3").innerHTML = summaryHTML();
+  $("#policy").innerHTML = bi(
+    `预约需支付 $${DEPOSIT} 订金，可抵扣当次护理费用。提交后请在 <b>1 小时内</b>通过 Interac e-Transfer 付款，否则时段会自动释放。取消或改期请提前 24 小时告知，否则订金不退、不可转让。`,
+    `A $${DEPOSIT} deposit secures your booking and is applied to your treatment. Please send it by Interac e-Transfer <b>within 1 hour</b>, or the time will be released. Please give 24 hours' notice to cancel or reschedule; otherwise the deposit is non-refundable and non-transferable.`);
+}
+function readForm(){
+  const v = id => $(id).value.trim();
+  const digits = v("#i-phone").replace(/\D/g,"");
+  const ok = { name: !!v("#i-name"), phone: digits.length>=10 };
+  document.querySelectorAll("#s3 .f[data-k]").forEach(f => f.classList.toggle("bad", !ok[f.dataset.k]));
+  if (!ok.name || !ok.phone) { $("#err3").innerHTML = bi("请填写姓名和手机号。","Please enter your name and phone number."); return null; }
+  if (!$("#i-agree").checked) { $("#err3").innerHTML = bi("请勾选同意订金与改期规则。","Please confirm the deposit policy."); return null; }
+  $("#err3").textContent = "";
+  return { p_items: state.sel, p_start: new Date(state.start).toISOString(), p_name: v("#i-name"), p_phone: v("#i-phone"),
+           p_email: v("#i-email")||null, p_wechat: v("#i-wechat")||null, p_lang: L, p_note: v("#i-note")||null };
+}
+["#i-name","#i-phone","#i-agree"].forEach(s => $(s).addEventListener("input", () => { $(s).closest(".f")?.classList.remove("bad"); renderBar(); }));
+$("#i-agree").addEventListener("change", renderBar);
+
+async function submit(){
+  const body = readForm(); if (!body) return;
+  $("#next").disabled = true;
+  let r;
+  try { r = await api("rpc/create_booking", body); }
+  catch(e){ $("#next").disabled=false; $("#err3").innerHTML = bi("网络有点问题，请再试一次。","Network problem — please try again."); return; }
+  if (!r || !r.ok) {
+    $("#next").disabled = false;
+    const msg = {
+      taken:["这个时间刚刚被约走了，请重新选择时间。","That time was just taken — please pick another."],
+      time:["这个时间不能预约，请重新选择。","That time isn't available — please pick another."],
+      closed:["这天休息，请选其他日期。","We're closed that day — please pick another."],
+      too_many:["这个手机号已有待付订金的预约，请先完成付款或联系我们。","This phone number already has bookings awaiting a deposit. Please pay or contact us."],
+      phone:["请检查手机号。","Please check your phone number."],
+    }[r && r.error] || ["预约没有成功，请再试一次或微信联系我们。","Something went wrong — please try again or message us."];
+    if (r && ["taken","time","closed"].includes(r.error)) { await loadBusy().catch(()=>{}); state.start=null; go(2); toast(L==="zh"?msg[0]:msg[1]); return; }
+    $("#err3").innerHTML = bi(msg[0], msg[1]); return;
+  }
+  state.booking = r;
+  try {   // 给你发一封「有新预约」的提醒邮件（不影响客人）
+    fetch(NOTIFY_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/x-www-form-urlencoded"},
+      body:new URLSearchParams({"form-name":"booking","bot-field":"",ref:r.ref,name:body.p_name,phone:body.p_phone,
+        when:whenText(state.start,"zh"),details:`${state.sel.map(id=>svc(id).name_zh).join(" + ")} · ${money(r.total_price)}\n请在 1 小时内确认订金：https://theonea.ca/app/admin.html`}).toString()});
+  } catch(_){}
+  go(4);
+}
+
+/* ---------- STEP 4 ---------- */
+function renderDone(){
+  const r = state.booking, due = Date.parse(r.deposit_due), dp = parts(due), dueT = `${pad(dp.H)}:${pad(dp.M)}`;
+  $("#ref").textContent = r.ref;
+  $("#pay").innerHTML = `
+    <h3>${bi("付订金完成预约","Pay your deposit")}</h3>
+    <div class="amt">$${DEPOSIT}</div>
+    <div class="kv"><span>${bi("方式","Method")}</span><b>Interac e-Transfer</b></div>
+    <div class="kv"><span>${bi("收款邮箱","Send to")}</span><b>${esc(CFG.emtEmail||"")}</b><button class="btn o sm" type="button" data-copy="${esc(CFG.emtEmail||"")}">${bi("复制","Copy")}</button></div>
+    <div class="kv"><span>${bi("备注填写","Message")}</span><b>${esc(r.ref)}</b><button class="btn o sm" type="button" data-copy="${esc(r.ref)}">${bi("复制","Copy")}</button></div>
+    <div class="due">${bi(`请在 ${dueT} 前付款（1 小时内），超时时段会自动释放。`,`Please send it by ${dueT} (within 1 hour), or the time will be released.`)}</div>
+    <p style="font:300 13px/1.7 var(--sans);color:var(--mute);margin:10px 0 0">${bi("收到订金后，我们会通过微信或短信发送确认。","Once we receive it, we'll confirm by WeChat or text.")}</p>`;
+  $("#sum4").innerHTML = summaryHTML();
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-copy]"); if(!b) return;
+  try { await navigator.clipboard.writeText(b.dataset.copy); toast(L==="zh"?"已复制 ✓":"Copied ✓"); }
+  catch(_){ window.prompt(L==="zh"?"请长按复制":"Long-press to copy", b.dataset.copy); }
+});
+
+/* ---------- 导航 ---------- */
+function renderBar(){
+  const t = state.sel.length ? totals() : null;
+  if (state.step===4) { $("#bar").classList.add("hidden"); return; }
+  $("#bar").classList.remove("hidden");
+  $("#back").classList.toggle("hidden", state.step===1);
+  $("#barinfo").innerHTML = !t ? bi("请选择护理项目","Choose a treatment")
+    : `<b>${money(t.price)}${t.from?"+":""} · ${t.min} min</b>${state.step>=2 && state.start ? bi(whenText(state.start,"zh"), whenText(state.start,"en")) : bi(`已选 ${state.sel.length} 项`,`${state.sel.length} selected`)}`;
+  const can = state.step===1 ? state.sel.length>0 : state.step===2 ? !!state.start : true;
+  $("#next").disabled = !can;
+  $("#next").innerHTML = state.step===3 ? bi("提交预约","Book now") : bi("下一步","Next");
+}
+async function go(n){
+  if (n===2) {
+    $("#times").innerHTML = `<div class="loading">${bi("读取可预约时间…","Loading times…")}</div>`;
+    try { await loadBusy(); } catch(e){ toast(L==="zh"?"读取时间失败，请刷新":"Couldn't load times — please refresh"); }
+  }
+  state.step = n;
+  ["#s1","#s2","#s3","#s4"].forEach((s,i)=>$(s).classList.toggle("hidden", i+1!==n));
+  document.querySelectorAll("#steps span").forEach((s,i)=>s.classList.toggle("on", i<n));
+  if (n===2) renderTimes();
+  if (n===3) renderStep3();
+  if (n===4) renderDone();
+  renderBar(); window.scrollTo(0,0);
+}
+$("#next").onclick = () => state.step===3 ? submit() : go(state.step+1);
+$("#back").onclick = () => go(state.step-1);
+
+/* ---------- 启动 ---------- */
+let l0=null; try{l0=localStorage.getItem("onea-lang")}catch(e){}
+setLang(l0 || ((navigator.language||"zh").toLowerCase().startsWith("en")?"en":"zh"));
+api("services?select=*&active=eq.true&order=sort").then(rows => {
+  state.services = rows || [];
+  const pre = new URLSearchParams(location.search).get("s");   // 例如 /book/?s=first_visit
+  if (pre && svc(pre)) { state.sel=[pre]; state.tab = (CATS.find(c=>c.cats.includes(svc(pre).cat))||CATS[0]).k; }
+  renderTabs(); renderSvcs(); renderBar();
+}).catch(() => { $("#svcs").innerHTML = `<div class="empty">${bi("暂时无法读取项目，请稍后再试或微信联系我们（_yyy1r）。","Couldn't load treatments. Please try again later or message us.")}</div>`; });
+})();
+</script>
+</body>
+</html>

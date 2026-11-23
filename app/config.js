@@ -20,6 +20,10 @@ window.ONEA_CONFIG = {
   visitGuideUrl: "https://theonea.ca/guide/",
   websiteUrl: "https://theonea.ca",
 
+  // 预约订金：客人用 Interac e-Transfer 发到这个邮箱
+  emtEmail: "wyran0319@gmail.com",
+  depositAmount: 30,
+
   // 发给客人的登录链接
   appUrl: "https://theonea.ca/app/"
 };

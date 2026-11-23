@@ -118,6 +118,20 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
 .qa .k{color:var(--muted);font-size:12.5px}
 .qa.flag .v{color:var(--warn)}
 @media(max-width:600px){.qa{grid-template-columns:1fr}}
+.bk-day{font:500 14px var(--sans);letter-spacing:.04em;margin:22px 0 8px;color:var(--ink)}
+.bk{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:13px 15px;margin-bottom:8px;cursor:pointer}
+.bk .r1{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.bk .tm{font:500 15px var(--sans)}
+.bk .nm{font-size:14.5px}
+.bk .meta{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.6}
+.bk.blocked{background:repeating-linear-gradient(45deg,#f3f0ea,#f3f0ea 8px,#ece8e0 8px,#ece8e0 16px)}
+.bk.dead{opacity:.5}
+.st{font-size:11.5px;border-radius:999px;padding:2px 9px;white-space:nowrap;border:1px solid var(--line);color:var(--muted)}
+.st.pending{border-color:var(--warn);color:var(--warn)}
+.st.confirmed{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.bk-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.blockform{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px;align-items:end}
+@media(max-width:600px){.blockform{grid-template-columns:1fr 1fr}.blockform .full{grid-column:1/-1}}
 .pref-glance{font-size:12.5px;color:var(--muted);line-height:1.7;margin-top:4px}
 </style>
 </head>
@@ -144,6 +158,7 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
   <h1>客人档案</h1>
   <p class="sub" id="list-count"></p>
   <div id="demo-banner" class="banner hidden">演示模式：数据只存在这个浏览器。客人端用同一个浏览器打开就能看到你录入的内容。</div>
+  <div id="bkcard"></div>
   <div id="inbox"></div>
   <div class="search"><input id="q" placeholder="搜索名字或手机号"></div>
   <div id="clist"></div>
@@ -159,6 +174,29 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
   <div class="top"><button class="btn ghost sm" id="back">← 客人列表</button><div class="eyebrow" id="edit-eyebrow"></div></div>
   <div id="editor"></div>
 </div>
+<!-- BOOKINGS -->
+<div id="s-book" class="wrap hidden">
+  <div class="top"><button class="btn ghost sm" id="book-back">← 客人列表</button><div class="eyebrow">预约 · Bookings</div></div>
+  <h1>预约</h1>
+  <p class="sub">新预约 1 小时内没确认订金会自动释放。确认后可以一键复制确认消息发给客人。</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+    <button class="btn solid sm" id="bk-addblock">＋ 占用时间</button>
+    <button class="btn ghost sm" id="bk-toggle">显示已取消 / 过期</button>
+    <a class="btn ghost sm" href="../book/" target="_blank" rel="noopener">打开客人预约页</a>
+  </div>
+  <div class="card hidden" id="bk-blockcard">
+    <p class="sub" style="margin-bottom:10px">休息、私事或别的平台（如 Setmore）已有的预约，都可以在这里占住时间，客人就约不到。</p>
+    <div class="blockform">
+      <div class="full"><label class="l">日期</label><input type="date" id="bf-date"></div>
+      <div><label class="l">开始</label><select id="bf-start"></select></div>
+      <div><label class="l">结束</label><select id="bf-end"></select></div>
+      <div class="full" style="grid-column:1/-1"><label class="l">备注（只有你看得到）</label><input id="bf-note" placeholder="例：休息 / Setmore 预约 · Amy"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn solid sm" id="bf-save">保存占用</button><button class="btn ghost sm" id="bf-cancel">取消</button></div>
+  </div>
+  <div id="bk-list"></div>
+</div>
+
 <!-- INTAKE -->
 <div id="s-intake" class="wrap hidden">
   <div class="top"><button class="btn ghost sm" id="intake-back">← 返回</button><div class="eyebrow">到店前问卷 · 仅你可见</div></div>
@@ -192,7 +230,7 @@ function ask(title, text, yes="确定"){
     $("#m-yes").onclick=()=>done(true); $("#m-no").onclick=()=>done(false);
   });
 }
-function show(id){ ["s-login","s-list","s-edit","s-intake"].forEach(s=>$("#"+s).classList.toggle("hidden", s!==id)); $("#savebar").classList.toggle("hidden", id!=="s-edit"); window.scrollTo(0,0); }
+function show(id){ ["s-login","s-list","s-edit","s-intake","s-book"].forEach(s=>$("#"+s).classList.toggle("hidden", s!==id)); $("#savebar").classList.toggle("hidden", id!=="s-edit"); window.scrollTo(0,0); }
 
 /* ========== AUTH ========== */
 let clients = [];
@@ -216,11 +254,13 @@ $("#reset-demo").onclick = async () => { if (await ask("重置演示数据","会
 async function openList(){
   try { clients = await DB.listClients(); }
   catch(e){ toast("读取失败：" + (e.message||"网络问题")); clients = []; }
+  try { bookings = await DB.listBookings(new Date(Date.now()-12*3600e3).toISOString()); bookErr = false; }
+  catch(e){ bookings = []; bookErr = true; }
   try { intakes = await DB.listIntakes(); intakeErr = false; }
   catch(e){ intakes = []; intakeErr = true; }
   $("#demo-banner").classList.toggle("hidden", LIVE);
   $("#reset-demo").hidden = LIVE; $("#signout").hidden = !LIVE;
-  renderInbox(); renderList(); show("s-list");
+  renderBkCard(); renderInbox(); renderList(); show("s-list");
 }
 function renderList(){
   const q = $("#q").value.trim().toLowerCase(), qd = normPhone(q);
@@ -516,9 +556,138 @@ function openIntake(id, from){
 }
 function backFromIntake(){
   if (intakeFrom === "s-edit") { renderEditor(); show("s-edit"); }
+  else if (intakeFrom === "s-book") { renderBookings(); show("s-book"); }
   else { renderInbox(); show("s-list"); }
 }
 $("#intake-back").onclick = backFromIntake;
+
+/* ========== 预约（仅后台） ========== */
+let bookings = [], bookErr = false, showDeadBk = false, openBk = null;
+const TZ = "America/Toronto";
+const WDZ = ["周日","周一","周二","周三","周四","周五","周六"];
+const tParts = ts => { const o={}; new Intl.DateTimeFormat("en-US",{timeZone:TZ,hourCycle:"h23",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",weekday:"short"}).formatToParts(new Date(ts)).forEach(p=>o[p.type]=p.value); return {y:+o.year,m:+o.month,d:+o.day,H:+o.hour,M:+o.minute,wd:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(o.weekday)}; };
+const hm = ts => { const p=tParts(ts); return `${String(p.H).padStart(2,"0")}:${String(p.M).padStart(2,"0")}`; };
+const dayKey = ts => { const p=tParts(ts); return `${p.y}-${String(p.m).padStart(2,"0")}-${String(p.d).padStart(2,"0")}`; };
+const dayLabel = ts => { const p=tParts(ts), today=dayKey(Date.now()), tmr=dayKey(Date.now()+864e5), k=dayKey(ts);
+  return `${p.m}月${p.d}日 ${WDZ[p.wd]}${k===today?" · 今天":k===tmr?" · 明天":""}`; };
+function zonedTs(dateStr, timeStr){   // 多伦多当地日期+时间 → 时间戳
+  const [y,m,d]=dateStr.split("-").map(Number), [H,M]=timeStr.split(":").map(Number);
+  const off = t => { const p=tParts(t); return Date.UTC(p.y,p.m-1,p.d,p.H,p.M) - Math.floor(t/60000)*60000; };
+  const g=Date.UTC(y,m-1,d,H,M); let t=g-off(g); return g-off(t);
+}
+const bkAlive = b => ["pending","confirmed","blocked"].includes(b.status);
+const bkItems = b => (b.items||[]).map(i=>i.zh).join(" + ");
+function bkStatus(b){
+  if (b.status==="pending") {
+    const left = Math.round((Date.parse(b.deposit_due)-Date.now())/60000);
+    return left>0 ? `<span class="st pending">待付订金 · 剩 ${left} 分钟</span>` : `<span class="st pending">订金已超时</span>`;
+  }
+  return {confirmed:`<span class="st confirmed">已确认</span>`, cancelled:`<span class="st">已取消</span>`, expired:`<span class="st">已过期释放</span>`, blocked:`<span class="st">占用</span>`}[b.status] || "";
+}
+
+function renderBkCard(){
+  const box = $("#bkcard");
+  if (bookErr) { box.innerHTML = `<div class="banner" style="margin-bottom:12px">预约读取失败。第一次用请先在 Supabase 运行 booking.sql。</div>`; return; }
+  const now = Date.now(), alive = bookings.filter(b=>bkAlive(b) && b.status!=="blocked" && Date.parse(b.end_at)>now);
+  const pend = alive.filter(b=>b.status==="pending"), today = alive.filter(b=>dayKey(Date.parse(b.start_at))===dayKey(now));
+  const next = alive[0];
+  box.innerHTML = `<div class="card" style="margin:4px 0 14px;cursor:pointer" id="bk-open">
+    <div class="sec-head"><h2>预约 <span class="sub">${pend.length?`· <span style="color:var(--warn)">${pend.length} 个待确认订金</span>`:""} · 今天 ${today.length} 个</span></h2><span class="btn ghost sm">打开 →</span></div>
+    <p class="sub" style="margin-top:6px">${next ? `下一个：${dayLabel(Date.parse(next.start_at))} ${hm(Date.parse(next.start_at))} · ${esc(next.name)} · ${esc(bkItems(next))}` : "暂时没有即将到来的预约。"}</p>
+  </div>`;
+}
+$("#bkcard").onclick = e => { if (e.target.closest("#bk-open")) { renderBookings(); show("s-book"); } };
+$("#book-back").onclick = () => openList();
+$("#bk-toggle").onclick = () => { showDeadBk = !showDeadBk; $("#bk-toggle").textContent = showDeadBk ? "只看有效预约" : "显示已取消 / 过期"; renderBookings(); };
+
+function confirmMsg(b){
+  const s = Date.parse(b.start_at), p = tParts(s);
+  const zh = `${b.name} 您好，已收到订金，您的预约已确认 ✨\n预约号：${b.ref}\n时间：${p.m}月${p.d}日 ${WDZ[p.wd]} ${hm(s)}（约 ${b.total_min} 分钟）\n项目：${bkItems(b)}\n地址：171 Queens Ave（正门进入，一楼大堂左手边）\n停车：旁边 Municipal Lot 5（HONK app 缴费）\n到店指南：https://theonea.ca/guide/\n到店前问卷：https://theonea.ca/intake.html\n如需改期请提前 24 小时告知，期待见到你。`;
+  const en = `Hi ${b.name}, we've received your deposit — your booking is confirmed ✨\nBooking: ${b.ref}\nTime: ${new Date(s).toLocaleDateString("en-CA",{timeZone:TZ,weekday:"short",month:"short",day:"numeric"})}, ${hm(s)} (about ${b.total_min} min)\nTreatment: ${(b.items||[]).map(i=>i.en).join(" + ")}\nAddress: 171 Queens Ave (main doors, ground-floor lobby on your left)\nParking: Municipal Lot 5 next door (pay with HONK)\nVisit guide: https://theonea.ca/guide/\nPre-visit form: https://theonea.ca/intake.html\nPlease give 24 hours' notice to reschedule. See you soon!`;
+  return b.lang === "en" ? en : zh;
+}
+async function copyText(t){ try { await navigator.clipboard.writeText(t); toast("已复制，可以直接粘贴到微信 / 短信"); } catch(e){ window.prompt("请复制：", t); } }
+
+function renderBookings(){
+  const now = Date.now();
+  const rows = bookings.filter(b => showDeadBk || bkAlive(b)).filter(b => Date.parse(b.end_at) > now - 12*3600e3);
+  if (!rows.length) { $("#bk-list").innerHTML = `<p class="sub" style="padding:24px 0">${bookErr?"预约读取失败。":"还没有预约。"}</p>`; return; }
+  let html = "", lastDay = "";
+  rows.forEach(b => {
+    const s = Date.parse(b.start_at), k = dayKey(s);
+    if (k !== lastDay) { html += `<div class="bk-day">${dayLabel(s)}</div>`; lastDay = k; }
+    const c = b.status==="blocked" ? null : clientByPhone(b.phone);
+    const it = b.status==="blocked" ? null : intakes.find(i => normPhone(i.phone) === normPhone(b.phone));
+    const open = openBk === b.id;
+    html += `<div class="bk ${b.status==="blocked"?"blocked":""} ${bkAlive(b)?"":"dead"}" data-bk="${esc(b.id)}">
+      <div class="r1"><span class="tm">${hm(s)}–${hm(Date.parse(b.end_at))}</span>${bkStatus(b)}</div>
+      ${b.status==="blocked"
+        ? `<div class="meta">${esc(b.name)}</div>`
+        : `<div class="nm">${esc(b.name)} <span class="sub">· ${fmtPhone(b.phone)}</span></div>
+           <div class="meta">${esc(bkItems(b))} · $${Number(b.total_price)} · ${esc(b.ref)}${b.wechat?` · 微信 ${esc(b.wechat)}`:""}${c?" · 已有档案":" · 新客人"}${it?" · 已填问卷":""}${b.note?`<br>备注：${esc(b.note)}`:""}</div>`}
+      ${open ? `<div class="bk-acts">
+        ${b.status==="blocked" ? `<button type="button" class="btn warn sm" data-act="del">删除占用</button>` : `
+          ${["pending","expired"].includes(b.status) ? `<button type="button" class="btn solid sm" data-act="confirm">确认已收订金</button>` : ""}
+          ${b.status==="confirmed" ? `<button type="button" class="btn solid sm" data-act="copy">复制确认消息</button>` : ""}
+          <button type="button" class="btn ghost sm" data-act="client">${c?"打开档案":"建立档案"}</button>
+          ${it ? `<button type="button" class="btn ghost sm" data-act="intake">看问卷</button>` : ""}
+          ${bkAlive(b) ? `<button type="button" class="btn warn sm" data-act="cancel">取消预约</button>` : ""}`}
+      </div>` : ""}
+    </div>`;
+  });
+  $("#bk-list").innerHTML = html;
+}
+$("#bk-list").onclick = async e => {
+  const card = e.target.closest("[data-bk]"); if (!card) return;
+  const b = bookings.find(x => x.id === card.dataset.bk), act = e.target.closest("[data-act]")?.dataset.act;
+  if (!act) { openBk = openBk === b.id ? null : b.id; renderBookings(); return; }
+  try {
+    if (act === "confirm") {
+      const r = await DB.updateBooking(b.id, { status:"confirmed", confirmed_at:new Date().toISOString() });
+      Object.assign(b, r); renderBookings(); renderBkCard();
+      toast("已确认 ✓ 点「复制确认消息」发给客人");
+    }
+    if (act === "copy") await copyText(confirmMsg(b));
+    if (act === "cancel") {
+      if (!(await ask("取消这个预约？", `${b.name} · ${dayLabel(Date.parse(b.start_at))} ${hm(Date.parse(b.start_at))}\n取消后这个时段会重新开放。订金是否退还请按你的规则另行处理。`, "取消预约"))) return;
+      Object.assign(b, await DB.updateBooking(b.id, { status:"cancelled" })); renderBookings(); renderBkCard(); toast("已取消");
+    }
+    if (act === "del") {
+      if (!(await ask("删除这段占用时间？", "删除后这段时间会重新开放给客人预约。", "删除"))) return;
+      await DB.deleteBooking(b.id); bookings = bookings.filter(x => x.id !== b.id); renderBookings(); toast("已删除");
+    }
+    if (act === "client") { const c = clientByPhone(b.phone); openEdit(c || null, c ? null : { name: b.name, phone: normPhone(b.phone) }); }
+    if (act === "intake") { const it = intakes.find(i => normPhone(i.phone) === normPhone(b.phone)); if (it) openIntake(it.id, "s-book"); }
+  } catch(err) {
+    const m = String(err.message||"");
+    toast(m.includes("no_overlap") || m.includes("conflicting key") ? "这个时段已经被别的预约占用了" : "操作失败：" + m);
+  }
+};
+
+/* 占用时间 */
+const halfHours = () => { const a=[]; for (let m=8*60; m<=22*60; m+=30) a.push(`${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`); return a; };
+$("#bk-addblock").onclick = () => {
+  const card = $("#bk-blockcard"); card.classList.toggle("hidden");
+  if (!card.classList.contains("hidden")) {
+    $("#bf-date").value = dayKey(Date.now());
+    const opts = halfHours().map(t=>`<option>${t}</option>`).join("");
+    $("#bf-start").innerHTML = opts; $("#bf-end").innerHTML = opts;
+    $("#bf-start").value = "10:00"; $("#bf-end").value = "20:00"; $("#bf-note").value = "";
+  }
+};
+$("#bf-cancel").onclick = () => $("#bk-blockcard").classList.add("hidden");
+$("#bf-save").onclick = async () => {
+  const d = $("#bf-date").value, s = zonedTs(d, $("#bf-start").value), e = zonedTs(d, $("#bf-end").value);
+  if (!d || e <= s) return toast("结束时间要晚于开始时间");
+  try {
+    const r = await DB.addBlock(new Date(s).toISOString(), new Date(e).toISOString(), $("#bf-note").value.trim());
+    bookings.push(r); bookings.sort((a,b)=>a.start_at<b.start_at?-1:1);
+    $("#bk-blockcard").classList.add("hidden"); renderBookings(); toast("已占用这段时间");
+  } catch(err) {
+    const m = String(err.message||"");
+    toast(m.includes("no_overlap") || m.includes("conflicting key") ? "这段时间里已经有预约了，请先处理那个预约" : "保存失败：" + m);
+  }
+};
 
 /* path helpers */
 function getPath(o, p){ return p.split(".").reduce((a,k)=>a?.[k], o); }
