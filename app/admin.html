@@ -569,7 +569,7 @@ function backFromIntake(){
 $("#intake-back").onclick = backFromIntake;
 
 /* ========== 预约（仅后台） ========== */
-let bookings = [], bookErr = false, showDeadBk = false, openBk = null;
+let bookings = [], bookErr = false, showDeadBk = false, openBk = null, moveBk = null;
 const TZ = "America/Toronto";
 const WDZ = ["周日","周一","周二","周三","周四","周五","周六"];
 const tParts = ts => { const o={}; new Intl.DateTimeFormat("en-US",{timeZone:TZ,hourCycle:"h23",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",weekday:"short"}).formatToParts(new Date(ts)).forEach(p=>o[p.type]=p.value); return {y:+o.year,m:+o.month,d:+o.day,H:+o.hour,M:+o.minute,wd:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(o.weekday)}; };
@@ -638,8 +638,14 @@ function renderBookings(){
           ${b.status==="confirmed" ? `<button type="button" class="btn solid sm" data-act="copy">复制确认消息</button>` : ""}
           <button type="button" class="btn ghost sm" data-act="client">${c?"打开档案":"建立档案"}</button>
           ${it ? `<button type="button" class="btn ghost sm" data-act="intake">看问卷</button>` : ""}
-          ${bkAlive(b) ? `<button type="button" class="btn warn sm" data-act="cancel">取消预约</button>` : ""}`}
-      </div>` : ""}
+          ${["pending","confirmed"].includes(b.status) ? `<button type="button" class="btn ghost sm" data-act="move">改期</button>` : ""}
+          ${bkAlive(b) ? `<button type="button" class="btn warn sm" data-act="cancel">取消预约 · 释放时段</button>` : ""}`}
+      </div>
+      ${moveBk === b.id ? `<div class="blockform" style="margin-top:12px">
+        <div class="full"><label class="l">新日期</label><input type="date" id="mv-date" value="${dayKey(s)}"></div>
+        <div class="full" style="grid-column:span 2"><label class="l">新开始时间（约 ${b.total_min} 分钟 + 30 分钟整理）</label><select id="mv-time">${halfHours().map(t=>`<option ${t===hm(s)?"selected":""}>${t}</option>`).join("")}</select></div>
+        <div class="full" style="grid-column:1/-1;display:flex;gap:8px"><button type="button" class="btn solid sm" data-act="move-save">保存改期</button><button type="button" class="btn ghost sm" data-act="move-cancel">取消</button></div>
+      </div>` : ""}` : ""}
     </div>`;
   });
   $("#bk-list").innerHTML = html;
@@ -647,7 +653,7 @@ function renderBookings(){
 $("#bk-list").onclick = async e => {
   const card = e.target.closest("[data-bk]"); if (!card) return;
   const b = bookings.find(x => x.id === card.dataset.bk), act = e.target.closest("[data-act]")?.dataset.act;
-  if (!act) { openBk = openBk === b.id ? null : b.id; renderBookings(); return; }
+  if (!act) { if (e.target.closest("input,select")) return; openBk = openBk === b.id ? null : b.id; moveBk = null; renderBookings(); return; }
   try {
     if (act === "confirm") {
       const r = await DB.updateBooking(b.id, { status:"confirmed", confirmed_at:new Date().toISOString() });
@@ -656,8 +662,18 @@ $("#bk-list").onclick = async e => {
     }
     if (act === "copy") await copyText(confirmMsg(b));
     if (act === "cancel") {
-      if (!(await ask("取消这个预约？", `${b.name} · ${dayLabel(Date.parse(b.start_at))} ${hm(Date.parse(b.start_at))}\n取消后这个时段会重新开放。订金是否退还请按你的规则另行处理。`, "取消预约"))) return;
-      Object.assign(b, await DB.updateBooking(b.id, { status:"cancelled" })); renderBookings(); renderBkCard(); toast("已取消");
+      if (!(await ask("取消这个预约？", `${b.name} · ${dayLabel(Date.parse(b.start_at))} ${hm(Date.parse(b.start_at))}。取消后这个时段马上重新开放给别人预约${b.email?"，客人会收到取消邮件":""}。订金是否退还请按你的规则另行处理。`, "确定取消"))) return;
+      Object.assign(b, await DB.updateBooking(b.id, { status:"cancelled" })); openBk = null; renderBookings(); renderBkCard(); toast("已取消，时段已释放");
+    }
+    if (act === "move") { moveBk = moveBk === b.id ? null : b.id; renderBookings(); return; }
+    if (act === "move-cancel") { moveBk = null; renderBookings(); return; }
+    if (act === "move-save") {
+      const ns = zonedTs($("#mv-date").value, $("#mv-time").value);
+      if (!$("#mv-date").value || isNaN(ns)) return toast("请选择新日期和时间");
+      const ne = ns + b.total_min*60000;
+      if (!(await ask("确认改期？", `${b.name}：${dayLabel(Date.parse(b.start_at))} ${hm(Date.parse(b.start_at))} → ${dayLabel(ns)} ${hm(ns)}。原来的时段会马上释放${b.email?"，客人会收到改期邮件":""}。`, "确认改期"))) return;
+      const r = await DB.updateBooking(b.id, { start_at:new Date(ns).toISOString(), end_at:new Date(ne).toISOString(), block_end:new Date(ne+30*60000).toISOString() });
+      Object.assign(b, r); moveBk = null; bookings.sort((x,y)=>Date.parse(x.start_at)-Date.parse(y.start_at)); renderBookings(); renderBkCard(); toast("已改期 ✓");
     }
     if (act === "del") {
       if (!(await ask("删除这段占用时间？", "删除后这段时间会重新开放给客人预约。", "删除"))) return;
