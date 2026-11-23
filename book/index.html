@@ -136,10 +136,8 @@ html[data-lang=en] .svc .n{font-family:var(--disp);font-size:19px}
     <div class="summary" id="sum3"></div>
     <div class="f" data-k="name"><label><span class="zh">姓名</span><span class="en">Name</span> <i>*</i></label><input id="i-name" autocomplete="name"></div>
     <div class="f" data-k="phone"><label><span class="zh">手机号</span><span class="en">Phone</span> <i>*</i></label><input id="i-phone" type="tel" autocomplete="tel" placeholder="519 555 0123"></div>
-    <div class="row2">
-      <div class="f"><label><span class="zh">微信号（选填）</span><span class="en">WeChat ID (optional)</span></label><input id="i-wechat"></div>
-      <div class="f"><label><span class="zh">邮箱（选填）</span><span class="en">Email (optional)</span></label><input id="i-email" type="email" autocomplete="email"></div>
-    </div>
+    <div class="f" data-k="email"><label><span class="zh">邮箱</span><span class="en">Email</span> <i>*</i> <span style="font-size:12px">· <span class="zh">预约确认会发到这里</span><span class="en">we'll send your confirmation here</span></span></label><input id="i-email" type="email" autocomplete="email" inputmode="email"></div>
+    <div class="f"><label><span class="zh">微信号（选填）</span><span class="en">WeChat ID (optional)</span></label><input id="i-wechat"></div>
     <div class="f"><label><span class="zh">备注（选填）</span><span class="en">Notes (optional)</span></label><textarea id="i-note"></textarea></div>
     <div class="policy" id="policy"></div>
     <label class="agree"><input type="checkbox" id="i-agree"><span><span class="zh">我已了解订金与改期规则。</span><span class="en">I understand the deposit and cancellation policy.</span></span></label>
@@ -178,7 +176,6 @@ const CFG = window.ONEA_CONFIG || {};
 const TZ = "America/Toronto", BUFFER = 30, STEP = 30, MIN_NOTICE_H = 2, DAYS_AHEAD = 60;
 const HOURS = {2:["11:00","19:00"],3:["11:00","19:00"],4:["11:00","19:00"],5:["10:00","20:00"],6:["10:00","20:00"],7:["10:00","20:00"]}; // ISO 周几，周一休息
 const DEPOSIT = CFG.depositAmount || 30;
-const NOTIFY_URL = "https://theoneavisitguide.netlify.app/";
 const CATS = [
   {k:"facial", zh:"面部护理", en:"Facials", cats:["first","facial"], note:null},
   {k:"addon", zh:"加选护理", en:"Add-ons", cats:["addon"], note:{zh:"可单独预约；搭配面部护理每项立减 $10。",en:"Book on its own, or add to any facial for $10 off each."}},
@@ -331,15 +328,15 @@ function renderStep3(){
 function readForm(){
   const v = id => $(id).value.trim();
   const digits = v("#i-phone").replace(/\D/g,"");
-  const ok = { name: !!v("#i-name"), phone: digits.length>=10 };
+  const ok = { name: !!v("#i-name"), phone: digits.length>=10, email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v("#i-email")) };
   document.querySelectorAll("#s3 .f[data-k]").forEach(f => f.classList.toggle("bad", !ok[f.dataset.k]));
-  if (!ok.name || !ok.phone) { $("#err3").innerHTML = bi("请填写姓名和手机号。","Please enter your name and phone number."); return null; }
+  if (!ok.name || !ok.phone || !ok.email) { $("#err3").innerHTML = bi("请填写姓名、手机号和正确的邮箱。","Please enter your name, phone number and a valid email."); return null; }
   if (!$("#i-agree").checked) { $("#err3").innerHTML = bi("请勾选同意订金与改期规则。","Please confirm the deposit policy."); return null; }
   $("#err3").textContent = "";
   return { p_items: state.sel, p_start: new Date(state.start).toISOString(), p_name: v("#i-name"), p_phone: v("#i-phone"),
-           p_email: v("#i-email")||null, p_wechat: v("#i-wechat")||null, p_lang: L, p_note: v("#i-note")||null };
+           p_email: v("#i-email"), p_wechat: v("#i-wechat")||null, p_lang: L, p_note: v("#i-note")||null };
 }
-["#i-name","#i-phone","#i-agree"].forEach(s => $(s).addEventListener("input", () => { $(s).closest(".f")?.classList.remove("bad"); renderBar(); }));
+["#i-name","#i-phone","#i-email","#i-agree"].forEach(s => $(s).addEventListener("input", () => { $(s).closest(".f")?.classList.remove("bad"); renderBar(); }));
 $("#i-agree").addEventListener("change", renderBar);
 
 async function submit(){
@@ -356,16 +353,12 @@ async function submit(){
       closed:["这天休息，请选其他日期。","We're closed that day — please pick another."],
       too_many:["这个手机号已有待付订金的预约，请先完成付款或联系我们。","This phone number already has bookings awaiting a deposit. Please pay or contact us."],
       phone:["请检查手机号。","Please check your phone number."],
+      email:["请检查邮箱地址。","Please check your email address."],
     }[r && r.error] || ["预约没有成功，请再试一次或微信联系我们。","Something went wrong — please try again or message us."];
     if (r && ["taken","time","closed"].includes(r.error)) { await loadBusy().catch(()=>{}); state.start=null; go(2); toast(L==="zh"?msg[0]:msg[1]); return; }
     $("#err3").innerHTML = bi(msg[0], msg[1]); return;
   }
-  state.booking = r;
-  try {   // 给你发一封「有新预约」的提醒邮件（不影响客人）
-    fetch(NOTIFY_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/x-www-form-urlencoded"},
-      body:new URLSearchParams({"form-name":"booking","bot-field":"",ref:r.ref,name:body.p_name,phone:body.p_phone,
-        when:whenText(state.start,"zh"),details:`${state.sel.map(id=>svc(id).name_zh).join(" + ")} · ${money(r.total_price)}\n请在 1 小时内确认订金：https://theonea.ca/app/admin.html`}).toString()});
-  } catch(_){}
+  state.booking = r; state.email = body.p_email;
   go(4);
 }
 
@@ -380,7 +373,7 @@ function renderDone(){
     <div class="kv"><span>${bi("收款邮箱","Send to")}</span><b>${esc(CFG.emtEmail||"")}</b><button class="btn o sm" type="button" data-copy="${esc(CFG.emtEmail||"")}">${bi("复制","Copy")}</button></div>
     <div class="kv"><span>${bi("备注填写","Message")}</span><b>${esc(r.ref)}</b><button class="btn o sm" type="button" data-copy="${esc(r.ref)}">${bi("复制","Copy")}</button></div>
     <div class="due">${bi(`请在 ${dueT} 前付款（1 小时内），超时时段会自动释放。`,`Please send it by ${dueT} (within 1 hour), or the time will be released.`)}</div>
-    <p style="font:300 13px/1.7 var(--sans);color:var(--mute);margin:10px 0 0">${bi("收到订金后，我们会通过微信或短信发送确认。","Once we receive it, we'll confirm by WeChat or text.")}</p>`;
+    <p style="font:300 13px/1.7 var(--sans);color:var(--mute);margin:10px 0 0">${bi(`付款方式也已发到你的邮箱 ${esc(state.email)}（没收到请看垃圾邮件）。收到订金后会再发一封确认邮件。`,`We've also emailed these details to ${esc(state.email)} (check spam if you don't see it). You'll get a confirmation email once the deposit arrives.`)}</p>`;
   $("#sum4").innerHTML = summaryHTML();
 }
 document.addEventListener("click", async e => {

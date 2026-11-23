@@ -178,7 +178,7 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
 <div id="s-book" class="wrap hidden">
   <div class="top"><button class="btn ghost sm" id="book-back">← 客人列表</button><div class="eyebrow">预约 · Bookings</div></div>
   <h1>预约</h1>
-  <p class="sub">新预约 1 小时内没确认订金会自动释放。确认后可以一键复制确认消息发给客人。</p>
+  <p class="sub">新预约会先保留 1 小时等订金，超时自动释放。收到 EMT 后点「确认已收订金」：这个时段就永久锁定，客人也会自动收到确认邮件。只有登录后台的你能确认。</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
     <button class="btn solid sm" id="bk-addblock">＋ 占用时间</button>
     <button class="btn ghost sm" id="bk-toggle">显示已取消 / 过期</button>
@@ -261,6 +261,13 @@ async function openList(){
   $("#demo-banner").classList.toggle("hidden", LIVE);
   $("#reset-demo").hidden = LIVE; $("#signout").hidden = !LIVE;
   renderBkCard(); renderInbox(); renderList(); show("s-list");
+  const m = location.hash.match(/ref=([A-Z0-9-]+)/i);   // 邮件里的「去确认订金」按钮
+  if (m) {
+    history.replaceState(null, "", location.pathname);
+    const b = bookings.find(x => x.ref === m[1].toUpperCase());
+    if (b) { openBk = b.id; renderBookings(); show("s-book"); setTimeout(()=>document.querySelector(`[data-bk="${b.id}"]`)?.scrollIntoView({block:"center"}), 50); }
+    else toast("没找到预约 " + m[1]);
+  }
 }
 function renderList(){
   const q = $("#q").value.trim().toLowerCase(), qd = normPhone(q);
@@ -624,7 +631,7 @@ function renderBookings(){
       ${b.status==="blocked"
         ? `<div class="meta">${esc(b.name)}</div>`
         : `<div class="nm">${esc(b.name)} <span class="sub">· ${fmtPhone(b.phone)}</span></div>
-           <div class="meta">${esc(bkItems(b))} · $${Number(b.total_price)} · ${esc(b.ref)}${b.wechat?` · 微信 ${esc(b.wechat)}`:""}${c?" · 已有档案":" · 新客人"}${it?" · 已填问卷":""}${b.note?`<br>备注：${esc(b.note)}`:""}</div>`}
+           <div class="meta">${esc(bkItems(b))} · $${Number(b.total_price)} · ${esc(b.ref)}${b.email?` · ${esc(b.email)}`:""}${b.wechat?` · 微信 ${esc(b.wechat)}`:""}${c?" · 已有档案":" · 新客人"}${it?" · 已填问卷":""}${b.note?`<br>备注：${esc(b.note)}`:""}</div>`}
       ${open ? `<div class="bk-acts">
         ${b.status==="blocked" ? `<button type="button" class="btn warn sm" data-act="del">删除占用</button>` : `
           ${["pending","expired"].includes(b.status) ? `<button type="button" class="btn solid sm" data-act="confirm">确认已收订金</button>` : ""}
@@ -645,7 +652,7 @@ $("#bk-list").onclick = async e => {
     if (act === "confirm") {
       const r = await DB.updateBooking(b.id, { status:"confirmed", confirmed_at:new Date().toISOString() });
       Object.assign(b, r); renderBookings(); renderBkCard();
-      toast("已确认 ✓ 点「复制确认消息」发给客人");
+      toast(b.email ? "已确认 ✓ 客人会自动收到确认邮件" : "已确认 ✓ 点「复制确认消息」发给客人");
     }
     if (act === "copy") await copyText(confirmMsg(b));
     if (act === "cancel") {
