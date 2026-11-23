@@ -15,7 +15,7 @@ window.ONEA_CONFIG = {
   supabaseAnonKey: "sb_publishable_t3RNuxnxKeTHBKgzbGnluQ_eL7bu5em",
 
   // 客人端「预约」按钮、预填表等链接
-  bookingUrl: "https://theonea.setmore.com",
+  bookingUrl: "https://theonea.ca/book/",
   intakeUrl: "https://theonea.ca/intake.html",
   visitGuideUrl: "https://theonea.ca/guide/",
   websiteUrl: "https://theonea.ca",
