@@ -611,7 +611,7 @@ function confirmMsg(b){
   const s = Date.parse(b.start_at), p = tParts(s);
   const zh = `${b.name} 您好，已收到订金，您的预约已确认 ✨\n预约号：${b.ref}\n时间：${p.m}月${p.d}日 ${WDZ[p.wd]} ${hm(s)}（约 ${b.total_min} 分钟）\n项目：${bkItems(b)}\n地址：171 Queens Ave（正门进入，一楼大堂左手边）\n停车：旁边 Municipal Lot 5（HONK app 缴费）\n到店指南：https://theonea.ca/guide/\n到店前问卷：https://theonea.ca/intake.html\n如需改期请提前 24 小时告知，期待见到你。`;
   const en = `Hi ${b.name}, we've received your deposit — your booking is confirmed ✨\nBooking: ${b.ref}\nTime: ${new Date(s).toLocaleDateString("en-CA",{timeZone:TZ,weekday:"short",month:"short",day:"numeric"})}, ${hm(s)} (about ${b.total_min} min)\nTreatment: ${(b.items||[]).map(i=>i.en).join(" + ")}\nAddress: 171 Queens Ave (main doors, ground-floor lobby on your left)\nParking: Municipal Lot 5 next door (pay with HONK)\nVisit guide: https://theonea.ca/guide/\nPre-visit form: https://theonea.ca/intake.html\nPlease give 24 hours' notice to reschedule. See you soon!`;
-  return b.lang === "en" ? en : zh;
+  return zh + "\n\n" + en;   // 对客人的消息一律中英双语
 }
 async function copyText(t){ try { await navigator.clipboard.writeText(t); toast("已复制，可以直接粘贴到微信 / 短信"); } catch(e){ window.prompt("请复制：", t); } }
 
