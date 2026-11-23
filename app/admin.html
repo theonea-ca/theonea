@@ -104,6 +104,20 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
 .lock{font-size:11px;color:var(--muted);background:var(--sand-soft);padding:3px 9px;border-radius:999px;white-space:nowrap}
 .pref-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .pref-row .lbl small{display:block;color:var(--muted);font-size:11px;font-family:var(--serif-en);font-style:italic}
+.inbox-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.inbox-row:last-child{border-bottom:0}
+.inbox-row .info{flex:1;min-width:0}
+.inbox-row .nm{font-size:14.5px}
+.inbox-row .meta{font-size:12px;color:var(--muted);margin-top:2px}
+.inbox-row.old{opacity:.55}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none}
+.dot.off{background:transparent;border:1px solid var(--sand)}
+.tag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.qa{display:grid;grid-template-columns:150px 1fr;gap:4px 14px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;line-height:1.7}
+.qa:last-child{border-bottom:0}
+.qa .k{color:var(--muted);font-size:12.5px}
+.qa.flag .v{color:var(--warn)}
+@media(max-width:600px){.qa{grid-template-columns:1fr}}
 .pref-glance{font-size:12.5px;color:var(--muted);line-height:1.7;margin-top:4px}
 </style>
 </head>
@@ -130,6 +144,7 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
   <h1>客人档案</h1>
   <p class="sub" id="list-count"></p>
   <div id="demo-banner" class="banner hidden">演示模式：数据只存在这个浏览器。客人端用同一个浏览器打开就能看到你录入的内容。</div>
+  <div id="inbox"></div>
   <div class="search"><input id="q" placeholder="搜索名字或手机号"></div>
   <div id="clist"></div>
   <div style="display:flex;gap:8px;margin-top:24px;flex-wrap:wrap">
@@ -143,6 +158,11 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
 <div id="s-edit" class="wrap hidden">
   <div class="top"><button class="btn ghost sm" id="back">← 客人列表</button><div class="eyebrow" id="edit-eyebrow"></div></div>
   <div id="editor"></div>
+</div>
+<!-- INTAKE -->
+<div id="s-intake" class="wrap hidden">
+  <div class="top"><button class="btn ghost sm" id="intake-back">← 返回</button><div class="eyebrow">到店前问卷 · 仅你可见</div></div>
+  <div id="intake-view"></div>
 </div>
 <div class="savebar hidden" id="savebar"><div class="in">
   <span class="dirty" id="dirty">已保存</span>
@@ -172,7 +192,7 @@ function ask(title, text, yes="确定"){
     $("#m-yes").onclick=()=>done(true); $("#m-no").onclick=()=>done(false);
   });
 }
-function show(id){ ["s-login","s-list","s-edit"].forEach(s=>$("#"+s).classList.toggle("hidden", s!==id)); $("#savebar").classList.toggle("hidden", id!=="s-edit"); window.scrollTo(0,0); }
+function show(id){ ["s-login","s-list","s-edit","s-intake"].forEach(s=>$("#"+s).classList.toggle("hidden", s!==id)); $("#savebar").classList.toggle("hidden", id!=="s-edit"); window.scrollTo(0,0); }
 
 /* ========== AUTH ========== */
 let clients = [];
@@ -196,9 +216,11 @@ $("#reset-demo").onclick = async () => { if (await ask("重置演示数据","会
 async function openList(){
   try { clients = await DB.listClients(); }
   catch(e){ toast("读取失败：" + (e.message||"网络问题")); clients = []; }
+  try { intakes = await DB.listIntakes(); intakeErr = false; }
+  catch(e){ intakes = []; intakeErr = true; }
   $("#demo-banner").classList.toggle("hidden", LIVE);
   $("#reset-demo").hidden = LIVE; $("#signout").hidden = !LIVE;
-  renderList(); show("s-list");
+  renderInbox(); renderList(); show("s-list");
 }
 function renderList(){
   const q = $("#q").value.trim().toLowerCase(), qd = normPhone(q);
@@ -221,9 +243,9 @@ let cur = null, dirty = false;
 function setDirty(v){ dirty=v; const d=$("#dirty"); d.textContent = v ? "有未保存的修改" : "已保存"; d.classList.toggle("on", v); }
 function genCode(){ return String(Math.floor(100000 + Math.random()*900000)); }
 
-function openEdit(c){
+function openEdit(c, pre){
   if (c) { cur = clone(c); cur.data = Object.assign(blankData(), cur.data || {}); }
-  else cur = { name:"", phone:"", code:genCode(), data: blankData() };
+  else cur = { name:pre?.name||"", phone:pre?.phone||"", code:genCode(), data: blankData() };
   // make sure structure is complete
   const d = cur.data;
   d.journey = JOURNEY.map((_,i)=> Object.assign({date:"",done:false,body:bi()}, d.journey?.[i]||{}));
@@ -231,8 +253,8 @@ function openEdit(c){
   d.ritual = Object.assign({am:[],pm:[]}, d.ritual||{});
   d.note = Object.assign({text:bi(),date:""}, d.note||{});
   $("#del").hidden = !cur.id;
-  renderEditor(); setDirty(false); show("s-edit");
-  loadComfort(cur.id);
+  renderEditor(); setDirty(!c && !!pre); show("s-edit");
+  loadComfort(cur.id).then(()=>{ if (pre?.comfort) applyComfortPrefill(pre.comfort); });
 }
 
 const biField = (path, obj, {area=false, ph=["中文","English（可选）"]}={}) => {
@@ -292,6 +314,7 @@ function renderEditor(){
   <div class="sec"><div class="sec-head"><h2>顾客偏好档案</h2><span class="lock">🔒 仅你可见 · 客人端不显示</span></div>
     <div class="card private" id="comfort-box"></div>
   </div>
+  ${intakeSection()}
 
   <div class="sec"><div class="sec-head"><h2>皮肤概况</h2><span class="eyebrow">Overview</span></div><div class="card">
     <div class="grid2">
@@ -396,6 +419,106 @@ function onComfortField(e){
 }
 $("#editor").addEventListener("input", onComfortField);
 $("#editor").addEventListener("change", onComfortField);
+
+/* ========== 到店前问卷（仅后台） ========== */
+let intakes = [], intakeErr = false, showOldIntakes = false, intakeFrom = "s-list";
+const fmtDT = s => { const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+const clientByPhone = p => clients.find(c => c.phone && c.phone === normPhone(p));
+const SKIP_KEYS = ["姓名","电话"];
+const FLAG = (k,v) => (k==="过敏史"||k==="皮肤疾病") ? v.startsWith("有") : k==="怀孕/哺乳" ? v!=="否" : k==="A酸类产品" ? v!=="没有" : k==="近3个月医美" ? v!=="都没有" : false;
+
+function intakeRow(it){
+  const c = clientByPhone(it.phone);
+  return `<div class="inbox-row ${it.handled?"old":""}" data-intake="${esc(it.id)}">
+    <span class="dot ${it.handled?"off":""}"></span>
+    <div class="info"><div class="nm">${esc(it.name)} <span class="tag">${esc(it.visit_type||"")}</span></div>
+      <div class="meta">${fmtPhone(it.phone)}${it.appt_date?` · 预约 ${esc(it.appt_date)}`:""} · 提交于 ${fmtDT(it.created_at)}</div></div>
+    <span class="tag">${c?"已有档案":"新客人"}</span></div>`;
+}
+function renderInbox(){
+  const box = $("#inbox");
+  if (intakeErr) { box.innerHTML = `<div class="banner" style="margin-bottom:12px">到店前问卷读取失败。第一次用请先在 Supabase 运行 intake_submissions.sql。</div>`; return; }
+  const fresh = intakes.filter(i=>!i.handled), rows = showOldIntakes ? intakes : fresh;
+  box.innerHTML = `<div class="card" style="margin:4px 0 14px">
+    <div class="sec-head"><h2>到店前问卷 <span class="sub">${fresh.length ? `· ${fresh.length} 份新问卷` : "· 没有新问卷"}</span></h2>
+      ${intakes.length>fresh.length?`<button type="button" class="btn ghost sm" id="toggle-old">${showOldIntakes?"只看新的":"显示已处理"}</button>`:""}</div>
+    ${rows.length ? `<div style="margin-top:6px">${rows.map(intakeRow).join("")}</div>` : `<p class="sub" style="margin-top:8px">客人提交的问卷会出现在这里，只有你看得到。</p>`}
+  </div>`;
+}
+$("#inbox").onclick = e => {
+  if (e.target.closest("#toggle-old")) { showOldIntakes = !showOldIntakes; renderInbox(); return; }
+  const r = e.target.closest("[data-intake]"); if (r) openIntake(r.dataset.intake, "s-list");
+};
+
+function intakeSection(){
+  if (!cur?.phone) return "";
+  const mine = intakes.filter(i => normPhone(i.phone) === normPhone(cur.phone));
+  if (!mine.length) return "";
+  return `<div class="sec"><div class="sec-head"><h2>到店前问卷</h2><span class="lock">🔒 仅你可见</span></div>
+    <div class="card">${mine.map(intakeRow).join("")}</div></div>`;
+}
+$("#editor").addEventListener("click", e => {
+  const r = e.target.closest("[data-intake]"); if (r) openIntake(r.dataset.intake, "s-edit");
+});
+
+function intakeComfort(a){
+  const p = {};
+  const pr = {"轻柔":"light","适中":"medium","偏重":"firm"}[a["按摩力度"]]; if (pr) p.pressure = pr;
+  const at = {"安静放松":"quiet","可以聊聊天":"chatty"}[a["护理时"]]; if (at) p.atmosphere = at;
+  const sens = [];
+  const det = v => v.replace(/^有（?|）$/g,"") || "有（未说明）";
+  if ((a["过敏史"]||"").startsWith("有")) sens.push("过敏：" + det(a["过敏史"]));
+  if ((a["皮肤疾病"]||"").startsWith("有")) sens.push("皮肤问题：" + det(a["皮肤疾病"]));
+  if (a["A酸类产品"] && a["A酸类产品"]!=="没有") sens.push("A 酸类：" + a["A酸类产品"]);
+  if (a["怀孕/哺乳"] && a["怀孕/哺乳"]!=="否") sens.push(a["怀孕/哺乳"]);
+  if (sens.length) p.sensitivities = sens.join("；");
+  if (a["香味"]==="尽量无香") p.touches = "尽量无香";
+  if (a["同意隐私说明"]==="是") p.consent = true;
+  return p;
+}
+function applyComfortPrefill(p){
+  let n = 0;
+  Object.entries(p).forEach(([k,v]) => { if (!comfort[k]) { comfort[k] = v; n++; } });
+  if (n) { comfortDirty = true; renderComfort(); setDirty(true); toast("已从问卷填入偏好档案，确认后点保存"); }
+}
+
+function openIntake(id, from){
+  const it = intakes.find(i=>i.id===id); if (!it) return;
+  if (from === "s-edit" && dirty) { toast("先保存档案，再打开问卷"); return; }
+  intakeFrom = from;
+  const c = clientByPhone(it.phone), a = it.answers || {};
+  const rows = Object.entries(a).filter(([k])=>!SKIP_KEYS.includes(k))
+    .map(([k,v])=>`<div class="qa ${FLAG(k,String(v))?"flag":""}"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("");
+  $("#intake-view").innerHTML = `
+    <h1>${esc(it.name)}</h1>
+    <p class="sub">${fmtPhone(it.phone)} · ${esc(it.visit_type||"")}${it.appt_date?` · 预约 ${esc(it.appt_date)}`:""} · 提交于 ${new Date(it.created_at).toLocaleString("zh-CN",{hour12:false})}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      ${from==="s-edit" ? "" : `<button type="button" class="btn solid sm" id="it-open">${c?"打开档案并填入偏好":"用这份问卷建档"}</button>`}
+      <button type="button" class="btn ghost sm" id="it-handled">${it.handled?"标记为未处理":"标记为已处理"}</button>
+      <button type="button" class="btn warn sm" id="it-del">删除问卷</button>
+    </div>
+    <p class="sub" style="margin-top:8px">红色 = 健康与禁忌里需要留意的回答。</p>
+    <div class="card">${rows}</div>`;
+  $("#it-handled").onclick = async () => {
+    try { await DB.setIntakeHandled(it.id, !it.handled); it.handled = !it.handled; openIntake(it.id, from); toast(it.handled?"已标记为已处理":"已标记为未处理"); }
+    catch(e){ toast("操作失败：" + (e.message||"")); }
+  };
+  $("#it-del").onclick = async () => {
+    if (!(await ask("删除这份问卷？", `${it.name} 的问卷会被永久删除。`, "删除"))) return;
+    try { await DB.deleteIntake(it.id); intakes = intakes.filter(i=>i.id!==it.id); toast("已删除"); backFromIntake(); }
+    catch(e){ toast("删除失败：" + (e.message||"")); }
+  };
+  if ($("#it-open")) $("#it-open").onclick = async () => {
+    if (!it.handled) { try { await DB.setIntakeHandled(it.id, true); it.handled = true; } catch(e){} }
+    openEdit(c || null, { name: it.name, phone: normPhone(it.phone), comfort: intakeComfort(a) });
+  };
+  show("s-intake");
+}
+function backFromIntake(){
+  if (intakeFrom === "s-edit") { renderEditor(); show("s-edit"); }
+  else { renderInbox(); show("s-list"); }
+}
+$("#intake-back").onclick = backFromIntake;
 
 /* path helpers */
 function getPath(o, p){ return p.split(".").reduce((a,k)=>a?.[k], o); }

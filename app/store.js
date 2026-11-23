@@ -225,6 +225,33 @@
     },
     resetDemo() { memDB = seed(); demoSave(); },
 
+    /* ---------- 到店前问卷（仅后台可读） ---------- */
+    async listIntakes() {
+      if (!LIVE) { try { return JSON.parse(localStorage.getItem("onea:demo-intake") || "[]"); } catch (e) { return []; } }
+      const db = await sb();
+      const { data, error } = await db.from("intake_submissions").select("*").order("created_at", { ascending: false }).limit(300);
+      if (error) throw error;
+      return data;
+    },
+    async setIntakeHandled(id, handled) {
+      if (!LIVE) {
+        const all = await DB.listIntakes(); const x = all.find(i => i.id === id); if (x) x.handled = handled;
+        try { localStorage.setItem("onea:demo-intake", JSON.stringify(all)); } catch (e) {} return;
+      }
+      const db = await sb();
+      const { error } = await db.from("intake_submissions").update({ handled }).eq("id", id);
+      if (error) throw error;
+    },
+    async deleteIntake(id) {
+      if (!LIVE) {
+        const all = (await DB.listIntakes()).filter(i => i.id !== id);
+        try { localStorage.setItem("onea:demo-intake", JSON.stringify(all)); } catch (e) {} return;
+      }
+      const db = await sb();
+      const { error } = await db.from("intake_submissions").delete().eq("id", id);
+      if (error) throw error;
+    },
+
     /* ---------- 顾客偏好档案（仅后台）：单独一张表，客人端读不到 ---------- */
     async getComfort(clientId) {
       if (!clientId) return null;

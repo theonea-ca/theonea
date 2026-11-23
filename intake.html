@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>The ONEA · 到店前问卷 Pre-Visit Form</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Noto+Serif+SC:wght@400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F6F2; --card:#FBFAF7; --line:#E4DED2; --accent:#D9D2C4;
+    --ink:#1E1E1E; --muted:#7A746A; --soft:#EFEBE3; --err:#A0533F;
+    --serif:"Cormorant Garamond","Noto Serif SC",Georgia,serif;
+    --sans:"Noto Sans SC",-apple-system,"PingFang SC","Helvetica Neue",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:300;
+       line-height:1.7;-webkit-font-smoothing:antialiased;font-size:15px}
+  body.en .zh, body:not(.en) .en{display:none}
+  .wrap{max-width:620px;margin:0 auto;padding:28px 20px 80px}
+
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:56px}
+  .logo{font-family:var(--serif);letter-spacing:.32em;font-size:15px;font-weight:500}
+  .lang{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  .lang button{background:none;border:0;padding:6px 14px;font:inherit;font-size:12px;
+               color:var(--muted);cursor:pointer;letter-spacing:.08em}
+  .lang button.on{background:var(--ink);color:var(--bg)}
+
+  .hero{text-align:center;margin-bottom:44px}
+  .eyebrow{font-size:11px;letter-spacing:.3em;color:var(--muted);text-transform:uppercase}
+  h1{font-family:var(--serif);font-weight:400;font-size:34px;line-height:1.3;margin:14px 0 16px}
+  .hero p{color:var(--muted);font-size:14px;max-width:420px;margin:0 auto}
+  .rule{width:36px;height:1px;background:var(--ink);margin:26px auto 0;opacity:.5}
+
+  .visit{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:36px}
+  .visit label{border:1px solid var(--line);background:var(--card);border-radius:14px;
+               padding:16px;cursor:pointer;text-align:center;transition:.2s}
+  .visit input{display:none}
+  .visit b{display:block;font-weight:500;font-size:15px}
+  .visit small{color:var(--muted);font-size:12px}
+  .visit label:has(input:checked){border-color:var(--ink);background:var(--soft)}
+
+  section{background:var(--card);border:1px solid var(--line);border-radius:18px;
+          padding:28px 22px;margin-bottom:18px}
+  section.hide{display:none}
+  .sec-h{display:flex;align-items:baseline;gap:12px;margin-bottom:22px;
+         padding-bottom:14px;border-bottom:1px solid var(--line)}
+  .num{font-family:var(--serif);font-size:22px;color:var(--muted)}
+  h2{font-family:var(--serif);font-weight:500;font-size:21px;letter-spacing:.02em}
+  .sec-note{font-size:13px;color:var(--muted);margin:-10px 0 20px}
+
+  .f{margin-bottom:24px}
+  .f:last-child{margin-bottom:0}
+  .lbl{display:block;font-weight:400;font-size:14px;margin-bottom:10px}
+  .lbl i{color:var(--err);font-style:normal;margin-left:3px}
+  .hint{font-size:12px;color:var(--muted);margin:-6px 0 10px}
+  input[type=text],input[type=tel],input[type=email],input[type=date],textarea{
+    width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;
+    padding:12px 14px;font:inherit;font-size:15px;color:var(--ink);outline:none;transition:.2s}
+  textarea{min-height:84px;resize:vertical}
+  input:focus,textarea:focus{border-color:var(--ink)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+  .opts{display:flex;flex-wrap:wrap;gap:8px}
+  .opts label{position:relative;cursor:pointer}
+  .opts input{position:absolute;opacity:0;pointer-events:none}
+  .opts span.c{display:inline-block;border:1px solid var(--line);background:#fff;
+               border-radius:999px;padding:8px 15px;font-size:13.5px;transition:.15s}
+  .opts input:checked + span.c{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .opts input:focus-visible + span.c{outline:2px solid var(--accent);outline-offset:2px}
+  .scale{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .scale span.c{width:100%;text-align:center;padding:10px 0}
+  .scale-ends{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:6px}
+  .detail{margin-top:10px;display:none}
+  .detail.show{display:block}
+
+  .f.bad .lbl{color:var(--err)}
+  .f.bad input[type=text],.f.bad input[type=tel]{border-color:var(--err)}
+  .errmsg{display:none;font-size:12px;color:var(--err);margin-top:6px}
+  .f.bad .errmsg{display:block}
+
+  .consent label{display:flex;gap:12px;align-items:flex-start;font-size:13.5px;
+                 cursor:pointer;margin-bottom:14px}
+  .consent input[type=checkbox]{margin-top:5px;accent-color:var(--ink);width:16px;height:16px;flex:none}
+  .privacy{background:var(--soft);border-radius:10px;padding:14px 16px;font-size:12.5px;
+           color:var(--muted);margin-bottom:20px}
+
+  .submit{width:100%;background:var(--ink);color:var(--bg);border:0;border-radius:999px;
+          padding:17px;font:inherit;font-size:15px;letter-spacing:.12em;cursor:pointer;margin-top:10px}
+  .submit:disabled{opacity:.5}
+  .formerr{text-align:center;color:var(--err);font-size:13px;margin-top:12px;display:none}
+
+  .done{display:none;text-align:center}
+  .done h1{margin-top:20px}
+  .done .msg{color:var(--muted);font-size:14px;margin-bottom:30px}
+  .summary{display:none;text-align:left;background:var(--card);border:1px solid var(--line);
+           border-radius:18px;padding:22px}
+  .summary p.t{font-size:13px;color:var(--muted);margin-bottom:12px}
+  .summary pre{white-space:pre-wrap;font-family:var(--sans);font-size:13px;line-height:1.8;
+               background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;
+               max-height:320px;overflow:auto}
+  .copy{margin-top:14px;width:100%;background:none;border:1px solid var(--ink);border-radius:999px;
+        padding:13px;font:inherit;font-size:14px;cursor:pointer;color:var(--ink)}
+  .guide{margin-top:28px;text-align:center}
+  .guide p{font-size:13px;color:var(--muted);margin-bottom:14px}
+  .guide a{display:block;background:var(--ink);color:var(--bg);text-decoration:none;
+           border-radius:999px;padding:16px;font-size:15px;letter-spacing:.1em}
+  footer{text-align:center;margin-top:48px;font-family:var(--serif);color:var(--muted);
+         font-size:14px;letter-spacing:.08em}
+  footer small{display:block;font-family:var(--sans);font-size:11.5px;margin-top:6px;letter-spacing:0}
+  @media (max-width:420px){ h1{font-size:29px} section{padding:24px 18px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="logo">THE ONEA</div>
+    <div class="lang"><button type="button" data-l="zh" class="on">中文</button><button type="button" data-l="en">EN</button></div>
+  </div>
+
+  <div id="formView">
+    <div class="hero">
+      <div class="eyebrow">Pre-Visit Form</div>
+      <h1><span class="zh">到店前，先认识你的皮肤</span><span class="en">Before your visit,<br>let us know your skin</span></h1>
+      <p><span class="zh">大约 5 分钟。提前了解你的皮肤与习惯，到店后我们就能把时间留给真正的护理。</span><span class="en">About 5 minutes. Knowing your skin and routine ahead of time means more of your visit goes to the ritual itself.</span></p>
+      <div class="rule"></div>
+    </div>
+
+    <div class="visit">
+      <label><input type="radio" name="visit" value="new" checked><b><span class="zh">第一次来</span><span class="en">First visit</span></b><small><span class="zh">填写完整问卷</span><span class="en">Full form</span></small></label>
+      <label><input type="radio" name="visit" value="return"><b><span class="zh">再次到店</span><span class="en">Returning</span></b><small><span class="zh">只更新变化</span><span class="en">Quick update</span></small></label>
+    </div>
+
+    <form id="form" novalidate></form>
+  </div>
+
+  <div class="done" id="doneView">
+    <div class="eyebrow">Thank you</div>
+    <h1><span class="zh">收到啦，期待见到你</span><span class="en">Received —<br>see you soon</span></h1>
+    <p class="msg" id="doneMsg"></p>
+    <div class="summary" id="summary">
+      <p class="t"><span class="zh">请点击下方按钮复制，并通过微信发送给我们：</span><span class="en">Please copy the text below and send it to us on WeChat or by text:</span></p>
+      <pre id="sumText"></pre>
+      <button type="button" class="copy" id="copyBtn"><span class="zh">复制内容</span><span class="en">Copy</span></button>
+    </div>
+    <div class="guide">
+      <p><span class="zh">地址、停车和到店前的小准备，都在到店指南里。</span><span class="en">Address, parking and how to prepare — all in our visit guide.</span></p>
+      <a href="https://theoneavisitguide.netlify.app" target="_blank" rel="noopener"><span class="zh">查看到店指南 →</span><span class="en">View Visit Guide →</span></a>
+    </div>
+  </div>
+
+  <footer>Slow Beauty · One Ritual<small>171 Queens Ave, London ON</small></footer>
+</div>
+
+<script src="app/config.js"></script>
+<script>
+/* ============ 设置 SETTINGS ============
+   问卷提交后存进 Supabase（表：intake_submissions），只有登录后台的你能看到。
+   客人只能提交，读不到任何人的问卷（包括自己的）。
+   同时给 Netlify 发一条「有新问卷」的简短提醒邮件（不含问卷内容）。
+   提交失败时：客人会看到整理好的文字，可复制后用微信发送。 */
+const CFG = window.ONEA_CONFIG || {};
+const NOTIFY_URL = "https://theoneavisitguide.netlify.app/";   // 邮件提醒（可留空关闭）
+/* ====================================== */
+
+const T = (zh,en)=>({zh,en});
+// show: "all" = 新老客都显示 / "new" = 仅首次 / "return" = 仅老客
+const FORM = [
+ {n:"01", t:T("基础信息","About You"), show:"all", fields:[
+   {k:"姓名",type:"text",t:T("姓名","Name"),req:1},
+   {k:"电话",type:"tel",t:T("手机号码","Phone number"),req:1,ph:T("用于预约联系","For appointment contact")},
+   {k:"微信号",type:"text",t:T("微信号（选填）","WeChat ID (optional)"),show:"new"},
+   {k:"邮箱",type:"email",t:T("邮箱（选填）","Email (optional)"),show:"new"},
+   {k:"生日",type:"text",t:T("生日（月/日，选填）","Birthday (MM/DD, optional)"),ph:T("例如 08/26，生日月有小惊喜","e.g. 08/26 — a little gift in your birthday month"),show:"new"},
+   {k:"预约日期",type:"date",t:T("预约日期","Appointment date")},
+   {k:"了解渠道",type:"radio",t:T("你是怎么知道 The ONEA 的？","How did you hear about us?"),show:"new",o:[
+     T("小红书","Xiaohongshu"),T("微信 / 朋友圈","WeChat"),T("朋友推荐","Friend referral"),T("Google / 地图","Google / Maps"),T("Instagram","Instagram"),T("其他","Other")]},
+ ]},
+ {n:"02", t:T("皮肤现状","Your Skin Today"), show:"new", fields:[
+   {k:"肤质",type:"radio",t:T("你觉得自己是什么肤质？","How would you describe your skin type?"),o:[
+     T("干性","Dry"),T("油性","Oily"),T("混合性","Combination"),T("中性","Normal"),T("不确定","Not sure")]},
+   {k:"主要困扰",type:"check",t:T("目前的皮肤困扰（可多选）","Current concerns (select all that apply)"),o:[
+     T("痘痘 / 闭口","Breakouts"),T("暗沉","Dullness"),T("色斑 / 痘印","Pigmentation"),T("细纹 / 松弛","Fine lines / firmness"),
+     T("毛孔粗大","Pores"),T("泛红 / 敏感","Redness / sensitivity"),T("缺水 / 紧绷","Dehydration"),T("黑头","Blackheads"),T("暂时没有","None right now")]},
+   {k:"敏感程度",type:"scale",t:T("皮肤敏感程度","How sensitive is your skin?"),ends:[T("很耐受","Very resilient"),T("非常敏感","Very sensitive")]},
+ ]},
+ {n:"03", t:T("健康与禁忌","Health & Precautions"), show:"all",
+  note:T("这一部分关系到护理安全，请如实填写。","This part keeps your treatment safe — please answer carefully."),
+  noteR:T("请根据你目前的情况重新确认。","Please confirm based on how things are now."), fields:[
+   {k:"过敏史",type:"radio",req:1,t:T("是否有过敏？（护肤品、精油、坚果、乳胶、药物等）","Any allergies? (skincare, essential oils, nuts, latex, medication…)"),o:[T("没有","No"),T("有","Yes")],detail:T("请说明过敏原","Please list what you're allergic to")},
+   {k:"怀孕/哺乳",type:"radio",req:1,t:T("目前是否怀孕或在哺乳期？","Are you currently pregnant or breastfeeding?"),o:[T("否","No"),T("怀孕中","Pregnant"),T("哺乳期","Breastfeeding")]},
+   {k:"A酸类产品",type:"radio",req:1,t:T("最近是否在用 A 醇 / A 酸类产品？","Are you using any retinoids?"),o:[T("没有","No"),T("外用 A 醇 / A 酸","Topical retinol / tretinoin"),T("口服异维 A 酸（如 Accutane）","Oral isotretinoin (e.g. Accutane)")],detail:T("产品名称（如知道）","Product name, if known")},
+   {k:"近3个月医美",type:"check",req:1,t:T("近 3 个月内做过以下项目吗？（可多选）","Any of these in the past 3 months? (select all)"),o:[
+     T("都没有","None"),T("激光 / 光子嫩肤","Laser / IPL"),T("刷酸 / 化学换肤","Chemical peel"),T("注射（肉毒 / 玻尿酸等）","Injectables"),T("微针","Microneedling"),T("其他","Other")],detail:T("项目和大概时间","Treatment and approximate date")},
+   {k:"皮肤疾病",type:"radio",req:1,t:T("是否有正在治疗或反复发作的皮肤问题？（湿疹、玫瑰痤疮、银屑病、疱疹等）","Any active or recurring skin conditions? (eczema, rosacea, psoriasis, cold sores…)"),o:[T("没有","No"),T("有","Yes")],detail:T("请简单说明","Please describe briefly")},
+   {k:"其他健康说明",type:"textarea",t:T("其他需要我们知道的健康情况（选填）","Anything else about your health we should know? (optional)"),ph:T("例如正在服用的药物、近期手术等","e.g. medications, recent surgery")},
+ ]},
+ {n:"04", t:T("日常护理习惯","Your Routine"), show:"new", fields:[
+   {k:"护肤步骤",type:"radio",t:T("早晚护肤大概几步？","How many steps in your daily routine?"),o:[T("1–2 步","1–2"),T("3–5 步","3–5"),T("6 步以上","6+"),T("不太固定","It varies")]},
+   {k:"化妆频率",type:"radio",t:T("化妆频率","How often do you wear makeup?"),o:[T("每天","Daily"),T("偶尔","Sometimes"),T("几乎不化","Rarely")]},
+   {k:"防晒",type:"radio",t:T("防晒习惯","Sunscreen"),o:[T("每天都涂","Every day"),T("出门才涂","When going out"),T("很少涂","Rarely")]},
+   {k:"在用产品",type:"textarea",t:T("目前主要在用的产品（选填）","Main products you're using now (optional)"),hint:T("记不清也没关系，到店前把护肤品拍照微信发给我们就好。","Can't remember? Just send us a photo of your products before your visit."),ph:T("洁面、精华、面霜……","Cleanser, serum, moisturizer…")},
+   {k:"作息",type:"radio",t:T("最近的作息","Sleep lately"),o:[T("规律","Regular"),T("一般","So-so"),T("经常熬夜","Often late nights")]},
+   {k:"饮水",type:"radio",t:T("每天喝水","Daily water intake"),o:[T("充足","Plenty"),T("一般","Average"),T("偏少","Not much")]},
+ ]},
+ {n:"04", t:T("近况更新","What's New"), show:"return", fields:[
+   {k:"上次护理后感受",type:"textarea",t:T("上次护理后，皮肤状态怎么样？","How has your skin been since your last visit?")},
+   {k:"近期变化",type:"textarea",t:T("最近有没有换新产品、作息变化或其他新情况？","Any new products, routine changes or anything new lately?")},
+ ]},
+ {n:"05", t:T("期待与偏好","Your Preferences"), show:"all", fields:[
+   {k:"这次想改善",type:"textarea",t:T("这次最想改善或放松的是什么？","What would you most like from this visit?"),ph:T("例如：最近下巴爆痘、想整体提亮、单纯想放松……","e.g. chin breakouts, a brighter look, simply to unwind…")},
+   {k:"按摩力度",type:"radio",show:"new",t:T("喜欢的按摩力度","Preferred massage pressure"),o:[T("轻柔","Light"),T("适中","Medium"),T("偏重","Firm"),T("交给你判断","Your call")]},
+   {k:"香味",type:"radio",show:"new",t:T("对香味（精油香气）的接受度","How do you feel about scent (essential oils)?"),o:[T("喜欢","Love it"),T("无所谓","No preference"),T("尽量无香","Prefer unscented")]},
+   {k:"护理时",type:"radio",show:"new",t:T("护理过程中，你更喜欢","During the treatment, you'd prefer"),o:[T("安静放松","Quiet & restful"),T("可以聊聊天","Happy to chat"),T("看当天心情","Depends on the day")]},
+ ]},
+];
+
+const form = document.getElementById("form");
+let lang = "zh";
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const bi = t => `<span class="zh">${t.zh}</span><span class="en">${t.en}</span>`;
+let uid = 0;
+
+function fieldHTML(f){
+  const show = f.show ? ` data-show="${f.show}"` : "";
+  let h = `<div class="f" data-k="${esc(f.k)}" data-type="${f.type}"${f.req?' data-req="1"':''}${show}>`;
+  h += `<span class="lbl">${bi(f.t)}${f.req?'<i>*</i>':''}</span>`;
+  if(f.hint) h += `<p class="hint">${bi(f.hint)}</p>`;
+  const ph = f.ph ? ` data-ph-zh="${esc(f.ph.zh)}" data-ph-en="${esc(f.ph.en)}"` : "";
+  if(["text","tel","email","date"].includes(f.type)){
+    h += `<input type="${f.type}" name="${esc(f.k)}"${ph}>`;
+  } else if(f.type==="textarea"){
+    h += `<textarea name="${esc(f.k)}"${ph}></textarea>`;
+  } else if(f.type==="scale"){
+    h += `<div class="opts scale">` + [1,2,3,4,5].map(v=>`<label><input type="radio" name="${esc(f.k)}" value="${v}"><span class="c">${v}</span></label>`).join("") + `</div>`;
+    h += `<div class="scale-ends"><span>${bi(f.ends[0])}</span><span>${bi(f.ends[1])}</span></div>`;
+  } else {
+    const it = f.type==="check" ? "checkbox" : "radio";
+    h += `<div class="opts">` + f.o.map(o=>`<label><input type="${it}" name="${esc(f.k)}" value="${esc(o.zh)}"><span class="c">${bi(o)}</span></label>`).join("") + `</div>`;
+    if(f.detail) h += `<div class="detail"><input type="text" name="${esc(f.k)}_说明" data-ph-zh="${esc(f.detail.zh)}" data-ph-en="${esc(f.detail.en)}"></div>`;
+  }
+  if(f.req) h += `<div class="errmsg">${bi(T("请填写这一项","Please answer this question"))}</div>`;
+  return h + `</div>`;
+}
+
+form.innerHTML = FORM.map(s=>{
+  let h = `<section data-show="${s.show}"><div class="sec-h"><span class="num" data-num>${s.n}</span><h2>${bi(s.t)}</h2></div>`;
+  if(s.note) h += `<p class="sec-note" data-note-new>${bi(s.note)}</p>`;
+  if(s.noteR) h += `<p class="sec-note" data-note-return>${bi(s.noteR)}</p>`;
+  return h + s.fields.map(fieldHTML).join("") + `</section>`;
+}).join("") + `
+<section data-show="all" class="consent">
+  <div class="sec-h"><span class="num" data-num>06</span><h2>${bi(T("确认与授权","Consent"))}</h2></div>
+  <div class="privacy">${bi(T("你的信息只用于为你制定护理方案，不会分享给任何第三方。如需查看或删除你的资料，随时告诉我们。",
+    "Your information is used only to plan your care and is never shared with third parties. Ask us anytime to view or delete it."))}</div>
+  <div class="f" data-k="photo" data-type="radio">
+    <span class="lbl">${bi(T("护理前后拍照记录","Before & after photos"))}</span>
+    <div class="opts">
+      ${[T("不拍照","No photos"),T("仅作内部记录","For my records only"),T("可匿名用于分享","OK to share anonymously")].map(o=>`<label><input type="radio" name="拍照授权" value="${o.zh}"><span class="c">${bi(o)}</span></label>`).join("")}
+    </div>
+  </div>
+  <div style="height:18px"></div>
+  <div class="f" data-k="确认" data-type="consent" data-req="1">
+    <label><input type="checkbox" name="确认信息真实" value="是">${bi(T("我确认以上信息真实准确。如健康状况有变化，会在到店前告知。","I confirm the information above is accurate and will let you know of any changes before my visit."))}</label>
+    <label><input type="checkbox" name="同意隐私说明" value="是">${bi(T("我已阅读并同意上述隐私说明。","I have read and agree to the privacy note above."))}</label>
+    <div class="errmsg">${bi(T("请勾选以上两项","Please check both boxes"))}</div>
+  </div>
+</section>
+<input type="text" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+<button type="submit" class="submit" id="submitBtn">${bi(T("提交问卷","Submit"))}</button>
+<p class="formerr" id="formErr">${bi(T("还有必填项没完成，请看标红的地方。","Some required answers are missing — see the highlighted questions."))}</p>`;
+
+// ----- language -----
+function setLang(l){
+  lang = l;
+  document.body.classList.toggle("en", l==="en");
+  document.documentElement.lang = l;
+  document.querySelectorAll(".lang button").forEach(b=>b.classList.toggle("on", b.dataset.l===l));
+  document.querySelectorAll("[data-ph-zh]").forEach(el=>el.placeholder = el.dataset["ph"+(l==="en"?"En":"Zh")]);
+  try{ localStorage.setItem("onea_lang", l) }catch(e){}
+}
+document.querySelectorAll(".lang button").forEach(b=>b.onclick=()=>setLang(b.dataset.l));
+try{ const s=localStorage.getItem("onea_lang"); if(s) setLang(s); else setLang((navigator.language||"").startsWith("zh")?"zh":"en") }catch(e){ setLang("zh") }
+
+// ----- new / returning -----
+const visitVal = ()=>document.querySelector('input[name=visit]:checked').value;
+function applyVisit(){
+  const v = visitVal(); let i = 0;
+  document.querySelectorAll("section").forEach(s=>{
+    const on = s.dataset.show==="all" || s.dataset.show===v;
+    s.classList.toggle("hide", !on);
+    if(on){ i++; s.querySelector("[data-num]").textContent = String(i).padStart(2,"0"); }
+  });
+  document.querySelectorAll(".f[data-show]").forEach(f=>f.style.display = (f.dataset.show===v) ? "" : "none");
+  document.querySelectorAll("[data-note-new]").forEach(n=>n.style.display = v==="new"?"":"none");
+  document.querySelectorAll("[data-note-return]").forEach(n=>n.style.display = v==="return"?"":"none");
+}
+document.querySelectorAll('input[name=visit]').forEach(r=>r.onchange=applyVisit);
+applyVisit();
+
+// ----- option behaviors: detail box, "none" exclusivity -----
+form.addEventListener("change", e=>{
+  const f = e.target.closest(".f"); if(!f) return;
+  f.classList.remove("bad");
+  const type = f.dataset.type;
+  if(type==="check" && e.target.type==="checkbox"){
+    const boxes = [...f.querySelectorAll('.opts input')];
+    const noneVals = ["都没有","暂时没有"];
+    if(e.target.checked){
+      if(noneVals.includes(e.target.value)) boxes.forEach(b=>{ if(b!==e.target) b.checked=false });
+      else boxes.forEach(b=>{ if(noneVals.includes(b.value)) b.checked=false });
+    }
+  }
+  const d = f.querySelector(".detail");
+  if(d){
+    const first = f.querySelector(".opts input").value;
+    const picked = [...f.querySelectorAll(".opts input:checked")].map(i=>i.value);
+    d.classList.toggle("show", picked.some(v=>v!==first));
+  }
+});
+form.addEventListener("input", e=>{ const f=e.target.closest(".f"); if(f) f.classList.remove("bad") });
+
+// ----- collect & validate -----
+function visible(el){ return el.offsetParent !== null }
+function collect(){
+  const out = {"客户类型": visitVal()==="new" ? "首次到店" : "老客更新"};
+  let ok = true;
+  document.querySelectorAll(".f").forEach(f=>{
+    if(!visible(f)) return;
+    const type = f.dataset.type, k = f.dataset.k;
+    let val = "";
+    if(type==="consent"){
+      const c = [...f.querySelectorAll("input")];
+      if(f.dataset.req && !c.every(i=>i.checked)){ f.classList.add("bad"); ok=false }
+      c.forEach(i=>out[i.name] = i.checked ? "是" : "否");
+      return;
+    }
+    if(["radio","check","scale"].includes(type)){
+      const picked = [...f.querySelectorAll(".opts input:checked")];
+      val = picked.map(i=>i.value).join("、");
+      if(f.dataset.k==="photo"){ if(val) out["拍照授权"] = val; return; }
+      const d = f.querySelector(".detail.show input");
+      if(d && d.value.trim()) val += "（" + d.value.trim() + "）";
+      if(type==="scale" && val) val += " / 5";
+    } else {
+      val = f.querySelector("input,textarea").value.trim();
+    }
+    if(f.dataset.req && !val){ f.classList.add("bad"); ok=false }
+    if(val) out[k] = val;
+  });
+  out["填写语言"] = lang==="en" ? "English" : "中文";
+  out["提交时间"] = new Date().toLocaleString("zh-CN",{hour12:false});
+  return ok ? out : null;
+}
+const toText = o => "【The ONEA 到店前问卷】\n" + Object.entries(o).map(([k,v])=>`${k}：${v}`).join("\n");
+
+// ----- submit -----
+form.addEventListener("submit", async e=>{
+  e.preventDefault();
+  const err = document.getElementById("formErr");
+  const data = collect();
+  if(!data){
+    err.style.display="block";
+    const bad = document.querySelector(".f.bad"); if(bad) bad.scrollIntoView({behavior:"smooth",block:"center"});
+    return;
+  }
+  err.style.display="none";
+  const btn = document.getElementById("submitBtn"); btn.disabled = true;
+  let sent = false;
+  if(form.querySelector('[name="website"]').value){ showDone(data, true); return; }   // 机器人
+  const digits = String(data["电话"]||"").replace(/\D/g,"");
+  const phone = digits.length===11 && digits[0]==="1" ? digits.slice(1) : digits;
+  try{
+    const r = await fetch(CFG.supabaseUrl + "/rest/v1/intake_submissions", {
+      method:"POST",
+      headers:{ "apikey":CFG.supabaseAnonKey, "Content-Type":"application/json", "Prefer":"return=minimal" },
+      body: JSON.stringify({
+        name: data["姓名"]||"", phone: phone || String(data["电话"]||""),
+        appt_date: data["预约日期"]||null, visit_type: data["客户类型"]||null,
+        lang: data["填写语言"]||null, answers: data
+      })
+    });
+    sent = r.ok;
+  }catch(_){ sent = false }
+  if(sent && NOTIFY_URL){
+    // 只发提醒，不含问卷内容；失败也不影响客人
+    try{
+      fetch(NOTIFY_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/x-www-form-urlencoded"},
+        body:new URLSearchParams({"form-name":"intake","bot-field":"",name:data["姓名"]||"",phone:data["电话"]||"",
+          date:data["预约日期"]||"",type:data["客户类型"]||"",details:"有新的到店前问卷，请到后台查看：https://theonea.ca/app/admin.html"}).toString()});
+    }catch(_){}
+  }
+  showDone(data, sent);
+});
+
+function showDone(data, sent){
+  document.getElementById("formView").style.display="none";
+  document.getElementById("doneView").style.display="block";
+  document.getElementById("doneMsg").innerHTML = sent
+    ? bi(T("你的问卷已经发送给我们。到店那天，我们会先和你一起简单确认一下。","Your form has been sent. We'll go over it together briefly when you arrive."))
+    : bi(T("还差最后一步。","Just one last step."));
+  if(!sent){
+    document.getElementById("summary").style.display="block";
+    document.getElementById("sumText").textContent = toText(data);
+  }
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+document.getElementById("copyBtn").onclick = async function(){
+  const txt = document.getElementById("sumText").textContent;
+  try{ await navigator.clipboard.writeText(txt); this.innerHTML = bi(T("已复制 ✓","Copied ✓")); }
+  catch(_){
+    const r = document.createRange(); r.selectNodeContents(document.getElementById("sumText"));
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    this.innerHTML = bi(T("已选中，请长按复制","Selected — long-press to copy"));
+  }
+};
+</script>
+</body>
+</html>

@@ -16,7 +16,7 @@ window.ONEA_CONFIG = {
 
   // 客人端「预约」按钮、预填表等链接
   bookingUrl: "https://theonea.setmore.com",
-  intakeUrl: "https://theoneavisitguide.netlify.app/intake.html",
+  intakeUrl: "https://theonea.ca/intake.html",
   visitGuideUrl: "https://theoneavisitguide.netlify.app",
   websiteUrl: "https://theonea.ca",
 
