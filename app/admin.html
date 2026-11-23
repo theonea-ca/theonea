@@ -99,6 +99,12 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
 .modal .acts{display:flex;justify-content:flex-end;gap:8px}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);font-size:13px;padding:10px 18px;border-radius:999px;opacity:0;transition:.3s;pointer-events:none;z-index:40}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+/* 顾客偏好档案（仅后台可见） */
+.card.private{background:#fff;border-style:dashed;border-color:var(--sand)}
+.lock{font-size:11px;color:var(--muted);background:var(--sand-soft);padding:3px 9px;border-radius:999px;white-space:nowrap}
+.pref-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.pref-row .lbl small{display:block;color:var(--muted);font-size:11px;font-family:var(--serif-en);font-style:italic}
+.pref-glance{font-size:12.5px;color:var(--muted);line-height:1.7;margin-top:4px}
 </style>
 </head>
 <body>
@@ -226,6 +232,7 @@ function openEdit(c){
   d.note = Object.assign({text:bi(),date:""}, d.note||{});
   $("#del").hidden = !cur.id;
   renderEditor(); setDirty(false); show("s-edit");
+  loadComfort(cur.id);
 }
 
 const biField = (path, obj, {area=false, ph=["中文","English（可选）"]}={}) => {
@@ -282,6 +289,10 @@ function renderEditor(){
     <div style="margin-top:10px"><button type="button" class="btn ghost sm" id="copy-msg">复制消息</button></div>
   </div></div>
 
+  <div class="sec"><div class="sec-head"><h2>顾客偏好档案</h2><span class="lock">🔒 仅你可见 · 客人端不显示</span></div>
+    <div class="card private" id="comfort-box"></div>
+  </div>
+
   <div class="sec"><div class="sec-head"><h2>皮肤概况</h2><span class="eyebrow">Overview</span></div><div class="card">
     <div class="grid2">
       <div class="field"><label class="l">肤质</label><select data-p="data.skinType">${opt("skinType", d.skinType)}</select></div>
@@ -328,7 +339,63 @@ function renderEditor(){
     ${listItems("data.history", d.history, "hist")}
   </div></div>
   <p class="sub" style="margin-top:20px">英文栏可以留空，客人切换到英文时会显示中文内容。</p>`;
+  renderComfort();
 }
+
+/* ========== 顾客偏好档案（仅后台） ========== */
+const COMFORT_OPTS = {
+  room_temp:  { zh:"室温", en:"Room temperature", o:{ warm:"偏暖", cool:"偏凉" } },
+  pressure:   { zh:"按摩力度", en:"Massage pressure", o:{ light:"轻柔", medium:"中等", firm:"偏强" } },
+  atmosphere: { zh:"护理氛围", en:"Treatment atmosphere", o:{ quiet:"安静休息", chatty:"愿意交流" } }
+};
+const blankComfort = () => ({ room_temp:"", pressure:"", atmosphere:"", sensitivities:"", touches:"", private_notes:"", consent:false });
+let comfort = blankComfort(), comfortState = "ready"; // ready | loading | error
+let comfortDirty = false;
+
+async function loadComfort(id){
+  comfort = blankComfort(); comfortDirty = false;
+  if (!id) { comfortState = "ready"; return renderComfort(); }
+  comfortState = "loading"; renderComfort();
+  try {
+    const r = await DB.getComfort(id);
+    if (!cur || cur.id !== id) return;           // 已经切换到别的客人
+    comfort = Object.assign(blankComfort(), r || {}); comfortState = "ready";
+  } catch(e) { comfortState = "error"; }
+  renderComfort();
+}
+
+function comfortGlance(){
+  const parts = Object.entries(COMFORT_OPTS).map(([k,g])=>comfort[k] ? g.o[comfort[k]] : "").filter(Boolean);
+  return parts.length ? "一眼看：" + parts.join(" · ") : "";
+}
+
+function renderComfort(){
+  const box = $("#comfort-box"); if (!box) return;
+  if (comfortState === "loading") { box.innerHTML = `<p class="sub">读取中…</p>`; return; }
+  if (comfortState === "error") { box.innerHTML = `<p class="sub" style="color:var(--warn)">偏好档案读取失败。如果是第一次用，请先在 Supabase 运行 client_comfort.sql。</p>`; return; }
+  const c = comfort;
+  box.innerHTML = `
+    ${Object.entries(COMFORT_OPTS).map(([k,g])=>`<div class="pref-row">
+      <div class="lbl">${g.zh}<small>${g.en}</small></div>
+      <div class="chips">${Object.entries(g.o).map(([v,t])=>`<button type="button" class="chip ${c[k]===v?"on":""}" data-cfield="${k}" data-cv="${v}">${t}</button>`).join("")}</div>
+    </div>`).join("")}
+    <div class="field" style="margin-top:14px"><label class="l">过敏、刺激反应及禁忌 · Skin sensitivities</label>
+      <textarea data-c="sensitivities" placeholder="例：对柑橘类精油敏感；不做酸类；乳胶手套过敏">${esc(c.sensitivities)}</textarea></div>
+    <div class="field"><label class="l">喜欢的舒缓方式、需要避免的体验 · Personal touches</label>
+      <textarea data-c="touches" placeholder="例：喜欢床垫加热、颈肩多按；不喜欢热毛巾盖脸">${esc(c.touches)}</textarea></div>
+    <div class="field"><label class="l">私人备注 · Private notes</label>
+      <textarea data-c="private_notes" placeholder="只有你看得到，例：喜欢聊小孩 / 上次提到下个月搬家">${esc(c.private_notes)}</textarea></div>
+    <label class="check"><input type="checkbox" data-c="consent" ${c.consent?"checked":""}>客人已同意记录以上信息</label>
+    <div class="pref-glance">${esc(comfortGlance())}${c.updated_at ? `${comfortGlance()?"　":""}上次更新 ${new Date(c.updated_at).toLocaleDateString("zh-CN")}` : ""}</div>`;
+}
+
+function onComfortField(e){
+  const el = e.target, k = el.dataset.c; if (!k) return;
+  comfort[k] = el.type==="checkbox" ? el.checked : el.value;
+  comfortDirty = true; setDirty(true);
+}
+$("#editor").addEventListener("input", onComfortField);
+$("#editor").addEventListener("change", onComfortField);
 
 /* path helpers */
 function getPath(o, p){ return p.split(".").reduce((a,k)=>a?.[k], o); }
@@ -366,6 +433,11 @@ $("#editor").addEventListener("click", async e => {
     d.journey.forEach((j,i)=>{ if(!j.date || i>=4) j.date = plan[i]; });
     renderEditor(); setDirty(true); toast("已排好日期，可以再手动调整"); return;
   }
+  if (b.dataset.cfield) {
+    const k = b.dataset.cfield, v = b.dataset.cv;
+    comfort[k] = comfort[k]===v ? "" : v;   // 再点一次 = 取消
+    comfortDirty = true; renderComfort(); setDirty(true); return;
+  }
   if (b.dataset.chip) {
     const arr = d[b.dataset.chip], k = b.dataset.key, i = arr.indexOf(k);
     i>-1 ? arr.splice(i,1) : arr.push(k); b.classList.toggle("on"); setDirty(true); return;
@@ -400,7 +472,13 @@ $("#save").onclick = async () => {
     const saved = await DB.saveClient(cur);
     cur.id = saved.id; cur.updated_at = saved.updated_at;
     const i = clients.findIndex(c=>c.id===saved.id); i>-1 ? clients[i]=clone(cur) : clients.unshift(clone(cur));
-    $("#del").hidden = false; renderEditor(); setDirty(false); toast("已保存，客人端刷新即可看到");
+    let comfortErr = null;
+    if (comfortDirty && comfortState !== "error") {
+      try { const r = await DB.saveComfort(saved.id, comfort); comfort = Object.assign(blankComfort(), r); comfortDirty = false; }
+      catch(e) { comfortErr = e; }
+    }
+    $("#del").hidden = false; renderEditor(); setDirty(!!comfortErr);
+    toast(comfortErr ? "档案已保存，但偏好档案没存上：" + (comfortErr.message||"请先在 Supabase 运行 SQL") : "已保存，客人端刷新即可看到");
   } catch(err) {
     toast(String(err.message||"").includes("duplicate") ? "这个手机号已经有档案了" : "保存失败：" + (err.message||"网络问题"));
   }

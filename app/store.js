@@ -223,7 +223,42 @@
       const { error } = await db.from("clients").delete().eq("id", id);
       if (error) throw error;
     },
-    resetDemo() { memDB = seed(); demoSave(); }
+    resetDemo() { memDB = seed(); demoSave(); },
+
+    /* ---------- 顾客偏好档案（仅后台）：单独一张表，客人端读不到 ---------- */
+    async getComfort(clientId) {
+      if (!clientId) return null;
+      if (!LIVE) {
+        try { return (JSON.parse(localStorage.getItem("onea:demo-comfort") || "{}"))[clientId] || null; }
+        catch (e) { return null; }
+      }
+      const db = await sb();
+      const { data, error } = await db.from("client_comfort").select("*").eq("client_id", clientId).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    async saveComfort(clientId, c) {
+      const row = {
+        client_id: clientId,
+        room_temp: c.room_temp || null, pressure: c.pressure || null, atmosphere: c.atmosphere || null,
+        sensitivities: (c.sensitivities || "").trim() || null,
+        touches: (c.touches || "").trim() || null,
+        private_notes: (c.private_notes || "").trim() || null,
+        consent: !!c.consent,
+        updated_at: new Date().toISOString()
+      };
+      if (!LIVE) {
+        let all = {};
+        try { all = JSON.parse(localStorage.getItem("onea:demo-comfort") || "{}"); } catch (e) {}
+        all[clientId] = row;
+        try { localStorage.setItem("onea:demo-comfort", JSON.stringify(all)); } catch (e) {}
+        return row;
+      }
+      const db = await sb();
+      const { data, error } = await db.from("client_comfort").upsert(row, { onConflict: "client_id" }).select().single();
+      if (error) throw error;
+      return data;
+    }
   };
   // persist demo writes made via saveClient
   const _save = DB.saveClient;
