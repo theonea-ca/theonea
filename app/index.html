@@ -287,7 +287,7 @@ const T = {
     memberUntil:"会员有效至 {a}", memberForever:"储值会员持续有效", visitsCount:"已到店 {n} 次",
     memberToGo:"再来 {n} 次，即成为会员", memberToGoOne:"再来 1 次，即成为会员", memberOr:"来满 {m} 次自动成为会员，也可以选择储值。",
     memberPaused:"会员暂停中", memberPausedSub:"距上次到店已超过一年，下次到店后自动恢复。",
-    memberPerks:"会员福利", memberPreview:"成为会员后可享"
+    memberPerks:"会员福利", memberPreview:"成为会员后可享", memberInfo:"会员说明", memberInfoSub:"如何成为会员，以及会员福利"
   },
   en: {
     loginTitle:"Your skin profile", loginSub:"Sign in with the phone number and access code from the studio",
@@ -323,7 +323,7 @@ const T = {
     memberUntil:"Active until {a}", memberForever:"Prepaid membership stays active", visitsCount:"{n} visits so far",
     memberToGo:"{n} more visits to become a member", memberToGoOne:"One more visit to become a member", memberOr:"You become a member after {m} visits, or when you choose to prepay.",
     memberPaused:"Membership paused", memberPausedSub:"It's been over a year since your last visit. It resumes as soon as you come in.",
-    memberPerks:"Member benefits", memberPreview:"As a member, you'll enjoy"
+    memberPerks:"Member benefits", memberPreview:"As a member, you'll enjoy", memberInfo:"Membership", memberInfoSub:"How it works and what members receive"
   }
 };
 
@@ -571,6 +571,7 @@ function renderStudio(){
     <section><a class="btn solid" href="${esc(CFG.bookingUrl)}" target="_blank" rel="noopener">${t("book")}</a></section>
     <section><div class="card list">
       ${a(CFG.intakeUrl, t("intake"), t("intakeSub"))}
+      ${a((CFG.websiteUrl||"https://theonea.ca") + "/#membership", t("memberInfo"), t("memberInfoSub"))}
       ${a(CFG.visitGuideUrl, t("guide"), t("guideSub"))}
       ${a(CFG.websiteUrl, t("site"), t("siteSub"))}
       <div class="item"><div>${t("address")}<small>171 Queens Avenue, London ON N6A 5J7</small></div></div>
