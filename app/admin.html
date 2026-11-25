@@ -113,6 +113,16 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none}
 .dot.off{background:transparent;border:1px solid var(--sand)}
 .tag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
+/* 会员 */
+.mtag{display:inline-block;font-size:10.5px;letter-spacing:.04em;border-radius:999px;padding:2px 8px;margin-left:8px;vertical-align:2px;white-space:nowrap}
+.mtag.member{background:var(--ink);color:var(--bg)}
+.mtag.paused{border:1px solid var(--sand);color:var(--muted)}
+.mtag.guest{background:var(--sand-soft);color:var(--muted)}
+.mstat{display:flex;align-items:center;gap:14px;padding:4px 0 14px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.mstat .big{font-family:var(--serif-zh);font-size:30px;line-height:1}
+.mstat .big small{font-size:12px;color:var(--muted);margin-left:2px}
+.mstat .txt{font-size:13px;line-height:1.7}
+.mstat .txt small{display:block;color:var(--muted);font-size:12px}
 .qa{display:grid;grid-template-columns:150px 1fr;gap:4px 14px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;line-height:1.7}
 .qa:last-child{border-bottom:0}
 .qa .k{color:var(--muted);font-size:12.5px}
@@ -213,7 +223,7 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
 <script src="config.js"></script>
 <script src="store.js"></script>
 <script>
-const { CFG, LIVE, PRESETS, METRICS, JOURNEY, DB, blankData, normPhone, bi } = window.ONEA;
+const { CFG, LIVE, PRESETS, METRICS, JOURNEY, DB, blankData, normPhone, bi, membership } = window.ONEA;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -272,14 +282,21 @@ async function openList(){
 function renderList(){
   const q = $("#q").value.trim().toLowerCase(), qd = normPhone(q);
   const rows = clients.filter(c => !q || c.name.toLowerCase().includes(q) || (qd && c.phone.includes(qd)));
-  $("#list-count").textContent = `共 ${clients.length} 位客人`;
+  const nMember = clients.filter(c => membership(c.data).status === "member").length;
+  $("#list-count").textContent = `共 ${clients.length} 位客人 · 会员 ${nMember} 位`;
   $("#clist").innerHTML = rows.length ? rows.map(c=>{
     const j = c.data?.journey || [], n = j.filter(x=>x.done).length;
     const upd = c.updated_at ? new Date(c.updated_at).toLocaleDateString("zh-CN") : "";
     return `<div class="crow" data-id="${esc(c.id)}"><div class="avatar">${esc((c.name||"?").slice(0,1))}</div>
-      <div class="info"><div class="nm">${esc(c.name)}</div><div class="meta">${fmtPhone(c.phone)} · 更新于 ${upd}</div></div>
+      <div class="info"><div class="nm">${esc(c.name)}${memberTag(c.data)}</div><div class="meta">${fmtPhone(c.phone)} · 到店 ${membership(c.data).visits} 次 · 更新于 ${upd}</div></div>
       <div><div class="pbar">${j.map(x=>`<span class="${x.done?'d':''}"></span>`).join("")}</div><div class="meta" style="text-align:right;margin-top:5px">旅程 ${n}/7</div></div></div>`;
   }).join("") : `<p class="sub" style="padding:20px 0">${clients.length ? "没有找到匹配的客人" : "还没有客人，点右上角「新客人」开始。"}</p>`;
+}
+function memberTag(data){
+  const m = membership(data);
+  if (m.status === "member") return `<span class="mtag member">${m.prepaid ? "储值会员" : "会员"}</span>`;
+  if (m.status === "paused") return `<span class="mtag paused">会员暂停</span>`;
+  return `<span class="mtag guest">还差 ${m.toGo} 次</span>`;
 }
 $("#q").oninput = renderList;
 $("#clist").onclick = e => { const r=e.target.closest(".crow"); if(r) openEdit(clients.find(c=>c.id===r.dataset.id)); };
@@ -299,6 +316,7 @@ function openEdit(c, pre){
   METRICS.forEach(m => { d.metrics[m.key] = Object.assign({first:null,now:null}, d.metrics?.[m.key]||{}); });
   d.ritual = Object.assign({am:[],pm:[]}, d.ritual||{});
   d.note = Object.assign({text:bi(),date:""}, d.note||{});
+  d.member = Object.assign({priorVisits:0, prepaid:false, prepaidSince:""}, d.member||{});
   $("#del").hidden = !cur.id;
   renderEditor(); setDirty(!c && !!pre); show("s-edit");
   loadComfort(cur.id).then(()=>{ if (pre?.comfort) applyComfortPrefill(pre.comfort); });
@@ -334,6 +352,20 @@ function listItems(path, arr, kind){
   </div>`).join("") + `<button type="button" class="btn ghost sm" data-act="add" data-list="${path}" data-kind="${kind}">＋ 添加${kind==="step"?"步骤":"记录"}</button>`;
 }
 
+const fmtDay = s => s ? s.replaceAll("-", ".") : "";
+function memberStatusHtml(){
+  const m = membership(cur.data);
+  let txt;
+  if (m.status === "member") txt = `<b>${m.prepaid ? "储值会员" : "会员"}</b>${m.since ? ` · ${fmtDay(m.since)} 起` : ""}<small>${m.prepaid ? "储值会员一直有效" : `有效至 ${fmtDay(m.until)}（以最近一次到店 ${fmtDay(m.lastVisit)} 起算）`}</small>`;
+  else if (m.status === "paused") txt = `<b>会员暂停</b><small>最近一次到店 ${fmtDay(m.lastVisit)}，超过 ${CFG.memberActiveDays || 365} 天。下次到店后自动恢复。</small>`;
+  else txt = `<b>还差 ${m.toGo} 次成为会员</b><small>满 ${m.need} 次自动成为会员，或选择储值</small>`;
+  return `<div class="mstat"><div class="big">${m.visits}<small>次</small></div><div class="txt">${txt}</div></div>`;
+}
+function refreshMember(){
+  const box = $("#member-status"); if (box) box.innerHTML = memberStatusHtml();
+  const pd = $("#prepaid-date"); if (pd) pd.hidden = !cur.data.member?.prepaid;
+}
+
 function loginMsg(){
   const url = CFG.appUrl || location.href.replace(/admin\.html.*$/,"");
   const n = cur.name || "", p = fmtPhone(cur.phone), c = cur.code;
@@ -356,6 +388,16 @@ function renderEditor(){
     <label class="l" style="margin-top:6px">发给客人的开通消息（微信 / 短信）</label>
     <div class="msgbox" id="msg">${esc(loginMsg())}</div>
     <div style="margin-top:10px"><button type="button" class="btn ghost sm" id="copy-msg">复制消息</button></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head"><h2>会员</h2><span class="eyebrow">Membership</span></div><div class="card">
+    <div id="member-status">${memberStatusHtml()}</div>
+    <div class="grid2">
+      <div class="field"><label class="l">建档前的到店次数（app 记录之前来过几次）</label><input type="number" min="0" step="1" data-int data-p="data.member.priorVisits" value="${esc(d.member.priorVisits || 0)}"></div>
+      <div class="field"><label class="l">储值会员</label><label class="check" style="padding:10px 0"><input type="checkbox" data-p="data.member.prepaid" ${d.member.prepaid?"checked":""}>已储值（储值当天即成为会员）</label></div>
+      <div class="field" ${d.member.prepaid?"":"hidden"} id="prepaid-date"><label class="l">储值日期</label><input type="date" data-p="data.member.prepaidSince" value="${esc(d.member.prepaidSince)}"></div>
+    </div>
+    <p class="sub">到店次数按下方「护理记录」里不重复的日期自动计算。满 ${CFG.memberVisits || 3} 次自动成为会员；最近一次到店后 ${CFG.memberActiveDays || 365} 天内有效，过期只是暂停，下次到店自动恢复。</p>
   </div></div>
 
   <div class="sec"><div class="sec-head"><h2>顾客偏好档案</h2><span class="lock">🔒 仅你可见 · 客人端不显示</span></div>
@@ -725,10 +767,13 @@ function onField(e){
   const el=e.target, p=el.dataset.p; if(!p) return;
   let v = el.type==="checkbox" ? el.checked : el.value;
   if (el.hasAttribute("data-num")) v = v==="" ? null : Math.max(0, Math.min(100, Number(v)));
+  if (el.hasAttribute("data-int")) v = Math.max(0, Math.floor(Number(v)) || 0);
+  if (p==="data.member.prepaid" && v && !cur.data.member?.prepaidSince) { setPath(cur, "data.member.prepaidSince", todayStr()); const di=$('[data-p="data.member.prepaidSince"]'); if (di) di.value = todayStr(); }
   if (p==="phone") v = normPhone(v);
   if (p==="code") v = String(v).replace(/\D/g,"").slice(0,8);
   setPath(cur, p, v); setDirty(true);
   if (["name","phone","code"].includes(p)) $("#msg").textContent = loginMsg();
+  if (p.startsWith("data.member") || p.startsWith("data.history")) refreshMember();
 }
 
 $("#editor").addEventListener("click", async e => {

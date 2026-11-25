@@ -25,5 +25,16 @@ window.ONEA_CONFIG = {
   depositAmount: 30,
 
   // 发给客人的登录链接
-  appUrl: "https://theonea.ca/app/"
+  appUrl: "https://theonea.ca/app/",
+
+  // ---------- 会员 Membership ----------
+  // 来满几次自动成为会员（按「护理记录」里不同的日期计算）
+  memberVisits: 3,
+  // 最近一次到店后多少天内保持会员身份；过期只是暂停，下次到店自动恢复
+  memberActiveDays: 365,
+  // 会员福利（客人端显示，中英双语）
+  memberPerks: [
+    { zh: "每个换季一次 Shelf Edit 护肤柜整理", en: "A seasonal Shelf Edit of your skincare" },
+    { zh: "优先预约热门时段", en: "Priority booking for popular times" }
+  ]
 };

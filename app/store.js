@@ -77,7 +77,41 @@
       ritual: { am: [], pm: [] },
       weekly: bi(),
       note: { text: bi(), date: "" },
-      history: []
+      history: [],
+      member: { priorVisits: 0, prepaid: false, prepaidSince: "" }
+    };
+  }
+
+  /* ---------- 会员计算 / membership ----------
+     到店次数 = 「护理记录」里不重复的日期（今天及以前）+ 建档前的到店次数
+     会员 = 储值客人，或到店满 memberVisits 次
+     到店会员：最近一次到店后 memberActiveDays 天内有效，过期为「暂停」，下次到店自动恢复
+     储值会员：一直有效 */
+  const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  function membership(data, todayISO) {
+    const need = Number(CFG.memberVisits) || 3;
+    const activeDays = Number(CFG.memberActiveDays) || 365;
+    const today = todayISO || ymd(new Date());
+    const m = (data && data.member) || {};
+    const dates = [...new Set(((data && data.history) || []).map(h => h && h.date).filter(d => d && d <= today))].sort();
+    const prior = Math.max(0, Math.floor(Number(m.priorVisits) || 0));
+    const visits = dates.length + prior;
+    // 没有带日期的记录时，用建档日期代替最近到店日
+    const lastVisit = dates.at(-1) || (prior > 0 ? (data.since || "") : "");
+    let until = "";
+    if (lastVisit) { const d = new Date(lastVisit + "T12:00:00"); d.setDate(d.getDate() + activeDays); until = ymd(d); }
+    const prepaid = !!m.prepaid;
+    const earned = visits >= need;
+    let status = "guest";
+    if (prepaid) status = "member";
+    else if (earned) status = (!until || until >= today) ? "member" : "paused";
+    return {
+      status, prepaid, visits, need,
+      toGo: Math.max(0, need - visits),
+      via: prepaid ? "prepaid" : earned ? "visits" : "",
+      // 成为会员的日期：储值日，或刚好来满第 need 次的那天
+      since: prepaid ? (m.prepaidSince || "") : !earned ? "" : prior >= need ? (data.since || "") : (dates.at(need - prior - 1) || ""),
+      lastVisit, until: prepaid ? "" : until
     };
   }
 
@@ -329,5 +363,5 @@
   const _save = DB.saveClient;
   DB.saveClient = async c => { const r = await _save(c); if (!LIVE) demoSave(); return r; };
 
-  window.ONEA = { CFG, LIVE, PRESETS, METRICS, JOURNEY, DB, blankData, normPhone, bi };
+  window.ONEA = { CFG, LIVE, PRESETS, METRICS, JOURNEY, DB, blankData, normPhone, bi, membership };
 })();

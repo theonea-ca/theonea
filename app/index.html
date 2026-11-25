@@ -120,6 +120,21 @@ section{margin-top:26px}
 
 /* profile */
 .facts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* 会员 */
+.mbadge{display:inline-block;font-family:var(--sans);font-size:11px;letter-spacing:.04em;padding:2px 9px;border-radius:999px;background:var(--ink);color:var(--bg);margin-left:8px;vertical-align:4px}
+.mcard .mhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.mcard .mname{font-family:var(--serif-zh);font-size:17px}
+.mcard .mmeta{font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.7}
+.mcard.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.mcard.on .mmeta,.mcard.on .eyebrow,.mcard.on .perks small{color:#C9C2B4}
+.mdots{display:flex;gap:6px;margin:14px 0 4px}
+.mdots span{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--sand)}
+.mdots span.d{background:var(--sand)}
+.perks{list-style:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.mcard.on .perks{border-top-color:#46433E}
+.perks small{display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px}
+.perks li{font-size:13.5px;line-height:1.9;padding-left:14px;position:relative}
+.perks li::before{content:"";position:absolute;left:0;top:.8em;width:5px;height:5px;border-radius:50%;background:var(--sand)}
 .fact{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
 .fact .k{font-size:11.5px;color:var(--muted)}
 .fact .v{font-family:var(--serif-zh);font-size:16px;margin-top:4px}
@@ -234,7 +249,7 @@ nav button.on{color:var(--ink)}
 <script src="config.js"></script>
 <script src="store.js"></script>
 <script>
-const { CFG, PRESETS, METRICS, JOURNEY, DB, LIVE } = window.ONEA;
+const { CFG, PRESETS, METRICS, JOURNEY, DB, LIVE, membership } = window.ONEA;
 
 /* ================= UI TEXT ================= */
 const T = {
@@ -267,7 +282,12 @@ const T = {
     installText:"<b>iPhone：</b>用 Safari 打开 → 点底部「分享」按钮 → 选择「添加到主屏幕」<br><b>安卓：</b>用 Chrome 打开 → 点右上角「⋮」→ 选择「添加到主屏幕」或「安装应用」<br><span style='color:var(--muted)'>之后就能像 App 一样，从桌面直接打开。</span>",
     logout:"退出登录",
     navToday:"今日", navJourney:"旅程", navProfile:"档案", navStudio:"工作室",
-    footToday:"Slow beauty, one ritual.", footProfile:"好的护肤，始于理解。"
+    footToday:"Slow beauty, one ritual.", footProfile:"好的护肤，始于理解。",
+    memberTitle:"THE ONEA 会员", memberBadge:"会员", prepaidBadge:"储值会员", memberSince:"{a} 成为会员",
+    memberUntil:"会员有效至 {a}", memberForever:"储值会员持续有效", visitsCount:"已到店 {n} 次",
+    memberToGo:"再来 {n} 次，即成为会员", memberToGoOne:"再来 1 次，即成为会员", memberOr:"来满 {m} 次自动成为会员，也可以选择储值。",
+    memberPaused:"会员暂停中", memberPausedSub:"距上次到店已超过一年，下次到店后自动恢复。",
+    memberPerks:"会员福利", memberPreview:"成为会员后可享"
   },
   en: {
     loginTitle:"Your skin profile", loginSub:"Sign in with the phone number and access code from the studio",
@@ -298,7 +318,12 @@ const T = {
     installText:"<b>iPhone:</b> open in Safari → tap Share → “Add to Home Screen”<br><b>Android:</b> open in Chrome → tap “⋮” → “Add to Home screen” or “Install app”<br><span style='color:var(--muted)'>Then open it from your home screen like any app.</span>",
     logout:"Sign out",
     navToday:"Today", navJourney:"Journey", navProfile:"Profile", navStudio:"Studio",
-    footToday:"Slow beauty, one ritual.", footProfile:"Good skincare begins with understanding."
+    footToday:"Slow beauty, one ritual.", footProfile:"Good skincare begins with understanding.",
+    memberTitle:"THE ONEA Member", memberBadge:"Member", prepaidBadge:"Prepaid member", memberSince:"Member since {a}",
+    memberUntil:"Active until {a}", memberForever:"Prepaid membership stays active", visitsCount:"{n} visits so far",
+    memberToGo:"{n} more visits to become a member", memberToGoOne:"One more visit to become a member", memberOr:"You become a member after {m} visits, or when you choose to prepay.",
+    memberPaused:"Membership paused", memberPausedSub:"It's been over a year since your last visit. It resumes as soon as you come in.",
+    memberPerks:"Member benefits", memberPreview:"As a member, you'll enjoy"
   }
 };
 
@@ -396,7 +421,7 @@ function renderToday(){
   const note = L(d.note?.text);
   $("#v-today").innerHTML = `
     <div class="eyebrow">${dateLine}</div>
-    <h1>${greet}</h1><p class="sub">${t("todaySub")}</p>
+    <h1>${greet}${(()=>{ const m=membership(d, ymd(today)); return m.status==="member" ? `<span class="mbadge">${t(m.prepaid?"prepaidBadge":"memberBadge")}</span>` : ""; })()}</h1><p class="sub">${t("todaySub")}</p>
     <section><div class="stage">${stage}</div></section>
     <section>
       <div class="sec-head"><h2>${t("ritual")}</h2>
@@ -509,6 +534,7 @@ function renderProfile(){
     <div class="eyebrow">Skin Profile</div><h1>${t("profileTitle")}</h1>
     <p class="sub">${d.since?t("since",{a:fmt(d.since)}):""}${last?t("updated",{b:fmt(last)}):""}</p>
     <section><div class="facts">${facts.map(([k,v])=>`<div class="fact"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join("")}</div></section>
+    <section>${memberCard(d)}</section>
     <section><div class="sec-head"><h2>${t("focus")}</h2><span class="eyebrow">Focus</span></div><div class="chips">${chips(d.concerns,"concerns","")}</div></section>
     <section><div class="sec-head"><h2>${t("avoid")}</h2><span class="eyebrow">Avoid</span></div><div class="chips">${chips(d.avoid,"avoid","avoid")}</div></section>
     ${ms.length?`<section><div class="sec-head"><h2>${t("analysis")}</h2><span class="eyebrow">Analysis</span></div>
@@ -517,6 +543,25 @@ function renderProfile(){
     <section><div class="sec-head"><h2>${t("history")}</h2><span class="eyebrow">History</span></div>
       <div class="card">${hist.length?`<ul class="history">${hist.map(h=>`<li><div><div class="n">${esc(L(h.name))}</div>${L(h.detail)?`<small>${esc(L(h.detail))}</small>`:""}</div><span class="d">${h.date?fmtShort(h.date):""}</span></li>`).join("")}</ul>`:`<div class="empty">${t("none")}</div>`}</div></section>
     <div class="foot">${t("footProfile")}</div>`;
+}
+
+function memberCard(d){
+  const m = membership(d, ymd(today));
+  const perks = (CFG.memberPerks||[]).map(x=>`<li>${esc(L(x))}</li>`).join("");
+  if (m.status === "member") {
+    const meta = [t("visitsCount",{n:m.visits}), m.since ? t("memberSince",{a:fmt(m.since)}) : "", m.prepaid ? t("memberForever") : m.until ? t("memberUntil",{a:fmt(m.until)}) : ""].filter(Boolean).join(" · ");
+    return `<div class="card mcard on"><div class="mhead"><span class="mname">${t("memberTitle")}</span><span class="eyebrow">${m.prepaid?"Prepaid":"Member"}</span></div>
+      <div class="mmeta">${meta}</div>
+      ${perks?`<ul class="perks"><small>${t("memberPerks")}</small>${perks}</ul>`:""}</div>`;
+  }
+  if (m.status === "paused") {
+    return `<div class="card mcard"><div class="mhead"><span class="mname">${t("memberPaused")}</span><span class="eyebrow">Membership</span></div>
+      <div class="mmeta">${t("visitsCount",{n:m.visits})}<br>${t("memberPausedSub")}</div></div>`;
+  }
+  return `<div class="card mcard"><div class="mhead"><span class="mname">${t(m.toGo===1?"memberToGoOne":"memberToGo",{n:m.toGo})}</span><span class="eyebrow">Membership</span></div>
+    <div class="mdots">${Array.from({length:m.need},(_,i)=>`<span class="${i<m.visits?'d':''}"></span>`).join("")}</div>
+    <div class="mmeta">${t("memberOr",{m:m.need})}</div>
+    ${perks?`<ul class="perks"><small>${t("memberPreview")}</small>${perks}</ul>`:""}</div>`;
 }
 
 function renderStudio(){
