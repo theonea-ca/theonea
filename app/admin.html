@@ -152,6 +152,28 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
 .bal-row .amt{text-align:right;white-space:nowrap;font-size:13px;line-height:1.6}
 .bal-row .amt .neg{color:var(--warn)}
 .bal-preview{font-size:12.5px;color:var(--muted);margin:2px 0 10px}
+/* 护肤柜 */
+.mtag.shelf{background:#fff;border:1px solid var(--warn);color:var(--warn)}
+.sh-sum{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.sh-item{border-top:1px solid var(--line);padding:14px 0}
+.sh-item:first-of-type{border-top:0}
+.sh-top{display:flex;gap:12px;cursor:pointer}
+.sh-thumb{flex:none;width:56px;height:56px;border-radius:12px;background:var(--sand-soft) center/cover no-repeat;display:grid;place-items:center;color:var(--muted);font-family:var(--serif-zh)}
+.sh-top .info{flex:1;min-width:0}
+.sh-top .nm{font-size:14.5px}
+.sh-top .meta{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.6}
+.sh-top .cn{font-size:12.5px;color:#5C564C;margin-top:4px}
+.sh-st{font-size:11px;border-radius:999px;padding:2px 8px;white-space:nowrap;align-self:flex-start}
+.sh-st.new{border:1px solid var(--warn);color:var(--warn)}
+.sh-st.done{background:var(--sand-soft);color:var(--muted)}
+.sh-body{margin-top:12px}
+.sh-photos{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;max-width:520px}
+.sh-photos figure{margin:0}
+.sh-photos img{width:100%;border-radius:12px;border:1px solid var(--line);cursor:zoom-in;display:block;background:#fff}
+.sh-photos .none{aspect-ratio:1;border:1px dashed var(--sand);border-radius:12px;display:grid;place-items:center;font-size:12px;color:var(--muted)}
+.sh-photos figcaption{font-size:11.5px;color:var(--muted);margin-top:4px;text-align:center}
+.zoom{position:fixed;inset:0;background:rgba(20,20,20,.88);z-index:50;display:grid;place-items:center;padding:14px;cursor:zoom-out}
+.zoom img{max-width:100%;max-height:100%;border-radius:8px}
 </style>
 </head>
 <body>
@@ -232,7 +254,7 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
 <script src="config.js"></script>
 <script src="store.js"></script>
 <script>
-const { CFG, LIVE, PRESETS, METRICS, JOURNEY, DB, blankData, normPhone, bi, membership } = window.ONEA;
+const { CFG, LIVE, PRESETS, SHELF, METRICS, JOURNEY, DB, blankData, normPhone, bi, membership } = window.ONEA;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -252,7 +274,7 @@ function ask(title, text, yes="确定"){
 function show(id){ ["s-login","s-list","s-edit","s-intake","s-book"].forEach(s=>$("#"+s).classList.toggle("hidden", s!==id)); $("#savebar").classList.toggle("hidden", id!=="s-edit"); window.scrollTo(0,0); }
 
 /* ========== AUTH ========== */
-let clients = [];
+let clients = [], shelfPend = {};
 async function start(){
   if (!LIVE) { $("#live-fields").classList.add("hidden"); $("#demo-note").classList.remove("hidden"); show("s-login"); return; }
   if (await DB.adminSession()) return openList();
@@ -277,6 +299,7 @@ async function openList(){
   catch(e){ bookings = []; bookErr = true; }
   try { intakes = await DB.listIntakes(); intakeErr = false; }
   catch(e){ intakes = []; intakeErr = true; }
+  try { shelfPend = await DB.shelfPending(); } catch(e){ shelfPend = {}; }
   $("#demo-banner").classList.toggle("hidden", LIVE);
   $("#reset-demo").hidden = LIVE; $("#signout").hidden = !LIVE;
   renderBkCard(); renderInbox(); renderList(); show("s-list");
@@ -292,12 +315,13 @@ function renderList(){
   const q = $("#q").value.trim().toLowerCase(), qd = normPhone(q);
   const rows = clients.filter(c => !q || c.name.toLowerCase().includes(q) || (qd && c.phone.includes(qd)));
   const nMember = clients.filter(c => membership(c.data).status === "member").length;
-  $("#list-count").textContent = `共 ${clients.length} 位客人 · 会员 ${nMember} 位`;
+  const nShelf = Object.values(shelfPend).reduce((a,b)=>a+b,0);
+  $("#list-count").textContent = `共 ${clients.length} 位客人 · 会员 ${nMember} 位` + (nShelf ? ` · 护肤柜 ${nShelf} 件待看` : "");
   $("#clist").innerHTML = rows.length ? rows.map(c=>{
     const j = c.data?.journey || [], n = j.filter(x=>x.done).length;
     const upd = c.updated_at ? new Date(c.updated_at).toLocaleDateString("zh-CN") : "";
     return `<div class="crow" data-id="${esc(c.id)}"><div class="avatar">${esc((c.name||"?").slice(0,1))}</div>
-      <div class="info"><div class="nm">${esc(c.name)}${memberTag(c.data)}</div><div class="meta">${fmtPhone(c.phone)} · 到店 ${membership(c.data).visits} 次 · 更新于 ${upd}</div></div>
+      <div class="info"><div class="nm">${esc(c.name)}${memberTag(c.data)}${shelfPend[c.id]?`<span class="mtag shelf">护肤柜 ${shelfPend[c.id]} 件待看</span>`:""}</div><div class="meta">${fmtPhone(c.phone)} · 到店 ${membership(c.data).visits} 次 · 更新于 ${upd}</div></div>
       <div><div class="pbar">${j.map(x=>`<span class="${x.done?'d':''}"></span>`).join("")}</div><div class="meta" style="text-align:right;margin-top:5px">旅程 ${n}/7</div></div></div>`;
   }).join("") : `<p class="sub" style="padding:20px 0">${clients.length ? "没有找到匹配的客人" : "还没有客人，点右上角「新客人」开始。"}</p>`;
 }
@@ -330,6 +354,7 @@ function openEdit(c, pre){
   renderEditor(); setDirty(!c && !!pre); show("s-edit");
   loadComfort(cur.id).then(()=>{ if (pre?.comfort) applyComfortPrefill(pre.comfort); });
   loadBalance(cur.id, pre?.balance);
+  loadShelfAdmin(cur.id);
 }
 
 const biField = (path, obj, {area=false, ph=["中文","English（可选）"]}={}) => {
@@ -414,6 +439,10 @@ function renderEditor(){
     <div class="card" id="bal-box"></div>
   </div>
 
+  <div class="sec"><div class="sec-head"><h2>护肤柜</h2><span class="eyebrow">My Shelf</span></div>
+    <div class="card" id="shelf-box"></div>
+  </div>
+
   <div class="sec"><div class="sec-head"><h2>顾客偏好档案</h2><span class="lock">🔒 仅你可见 · 客人端不显示</span></div>
     <div class="card private" id="comfort-box"></div>
   </div>
@@ -467,6 +496,7 @@ function renderEditor(){
   <p class="sub" style="margin-top:20px">英文栏可以留空，客人切换到英文时会显示中文内容。</p>`;
   renderComfort();
   renderBalance();
+  renderShelfAdmin();
 }
 
 /* ========== 顾客偏好档案（仅后台） ========== */
@@ -523,6 +553,108 @@ function onComfortField(e){
 }
 $("#editor").addEventListener("input", onComfortField);
 $("#editor").addEventListener("change", onComfortField);
+
+/* ========== 护肤柜（客人自己上传；你打标签 + 写中英文说明，单独保存） ========== */
+let shRows = [], shState = "ready", shOpen = null, shPhotos = {}, shDraft = {};
+const SHV = k => SHELF.verdict[k] ? `${SHELF.verdict[k].zh} · ${SHELF.verdict[k].en}` : "";
+const SHL = (g, k) => SHELF[g][k] ? SHELF[g][k].zh : "";
+async function loadShelfAdmin(id){
+  shRows = []; shOpen = null; shPhotos = {}; shDraft = {};
+  if (!id) { shState = "ready"; return renderShelfAdmin(); }
+  shState = "loading"; renderShelfAdmin();
+  try { const r = await DB.shelfForClient(id); if (!cur || cur.id !== id) return; shRows = r; shState = "ready"; }
+  catch(e) { shState = "error"; }
+  renderShelfAdmin();
+}
+function shelfMsg(){
+  const n = cur.name || "", url = CFG.appUrl || "";
+  return `${n} 您好，护肤柜里的产品我都看过了，每一件的标签和说明已经更新在 THE ONEA App「护肤柜」页：${url}\n到店 Shelf Edit 时，我们再结合你的皮肤状态一起确认。\n\nHi ${n}, I've gone through the products on your shelf. Each one now has a label and a note on the My Shelf page of the THE ONEA app: ${url}\nWe'll confirm everything together, with a look at your skin, at your Shelf Edit.`;
+}
+function renderShelfAdmin(){
+  const box = $("#shelf-box"); if (!box) return;
+  if (!cur?.id) { box.innerHTML = `<p class="sub">保存档案后，客人就可以在 app 里上传护肤品。</p>`; return; }
+  if (shState === "loading") { box.innerHTML = `<p class="sub">读取中…</p>`; return; }
+  if (shState === "error") { box.innerHTML = `<p class="sub" style="color:var(--warn)">护肤柜读取失败。如果是第一次用，请先在 Supabase 运行 shelf.sql。</p>`; return; }
+  if (!shRows.length) { box.innerHTML = `<p class="sub">客人还没有上传护肤品（最多 ${SHELF.limit} 件）。</p>`; return; }
+  const pend = shRows.filter(r => r.needs_review).length;
+  box.innerHTML = `<div class="sh-sum"><span class="sub">${shRows.length} / ${SHELF.limit} 件 · ${pend ? `<b style="color:var(--warn);font-weight:500">${pend} 件待看</b>` : "都看过了"}</span>
+      <button type="button" class="btn ghost sm" data-shmsg>复制通知消息</button></div>
+    ${shRows.map(r => {
+      const open = shOpen === r.id, d = shDraft[r.id] || { v: r.verdict || "", zh: r.advice_zh || "", en: r.advice_en || "" };
+      const meta = [r.brand, SHL("category", r.category), SHL("usage", r.usage), r.opened ? "开封 " + fmtDay(r.opened) : ""].filter(Boolean).map(esc).join(" · ");
+      const st = r.needs_review ? `<span class="sh-st new">${r.reviewed_at ? "客人改过 · 待看" : "待看"}</span>` : `<span class="sh-st done">${esc(SHV(r.verdict) || "已看")}</span>`;
+      const ph = shPhotos[r.id];
+      const fig = (src, cap) => `<figure>${src ? `<img src="${esc(src)}" data-shzoom alt="">` : `<div class="none">没有照片</div>`}<figcaption>${cap}</figcaption></figure>`;
+      return `<div class="sh-item">
+        <div class="sh-top" data-shopen="${esc(r.id)}">
+          <div class="sh-thumb" ${r.thumb ? `style="background-image:url('${esc(r.thumb)}')"` : ""}>${r.thumb ? "" : esc((r.name||"·").slice(0,1))}</div>
+          <div class="info"><div class="nm">${esc(r.name)}</div>${meta ? `<div class="meta">${meta}</div>` : ""}${r.note ? `<div class="cn">客人：“${esc(r.note)}”</div>` : ""}</div>${st}
+        </div>
+        ${open ? `<div class="sh-body">
+          <div class="sh-photos">${ph === undefined ? `<p class="sub">读取照片中…</p>` : ph === null ? `<p class="sub" style="color:var(--warn)">照片读取失败</p>` : fig(ph.front, "正面") + fig(ph.ingredients, "成分表")}</div>
+          <label class="l">标签</label>
+          <div class="chips" style="margin-bottom:12px">${Object.keys(SHELF.verdict).map(k => `<button type="button" class="chip ${d.v===k?"on":""}" data-shv="${k}" data-shid="${esc(r.id)}">${SHV(k)}</button>`).join("")}</div>
+          <label class="l">说明（客人可见）</label>
+          <div class="bi" style="margin-bottom:10px">
+            <div class="tagz" data-l="中"><textarea data-sha="zh" data-shid="${esc(r.id)}" placeholder="例：和精华 A 成分重复，二选一即可">${esc(d.zh)}</textarea></div>
+            <div class="tagz" data-l="EN"><textarea data-sha="en" data-shid="${esc(r.id)}" placeholder="e.g. Overlaps with serum A — keep one of the two">${esc(d.en)}</textarea></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button type="button" class="btn solid sm" data-shsave="${esc(r.id)}">保存标签</button>
+            <button type="button" class="btn warn sm" data-shdel="${esc(r.id)}">删除这件</button>
+            ${r.reviewed_at ? `<span class="sub" style="font-size:12px">上次保存 ${new Date(r.reviewed_at).toLocaleDateString("zh-CN")}</span>` : ""}
+          </div>
+          <p class="sub" style="font-size:12px;margin-top:8px">保存后客人马上能看到。英文留空时，客人切到英文会显示中文。</p>
+        </div>` : ""}
+      </div>`;
+    }).join("")}`;
+}
+$("#editor").addEventListener("input", e => {
+  const el = e.target, k = el.dataset.sha; if (!k) return;
+  const id = el.dataset.shid, r = shRows.find(x => x.id === id);
+  shDraft[id] = shDraft[id] || { v: r.verdict || "", zh: r.advice_zh || "", en: r.advice_en || "" };
+  shDraft[id][k] = el.value;
+});
+$("#editor").addEventListener("click", async e => {
+  const z = e.target.closest("[data-shzoom]");
+  if (z) { const o = document.createElement("div"); o.className = "zoom"; o.innerHTML = `<img src="${z.src}">`; o.onclick = () => o.remove(); document.body.appendChild(o); return; }
+  const t = e.target.closest("[data-shopen],[data-shv],[data-shsave],[data-shdel],[data-shmsg]"); if (!t) return;
+  if (t.dataset.shmsg !== undefined) { copyText(shelfMsg()); return; }
+  if (t.dataset.shopen) {
+    const id = t.dataset.shopen; shOpen = shOpen === id ? null : id; renderShelfAdmin();
+    if (shOpen && shPhotos[id] === undefined) {
+      try { shPhotos[id] = await DB.shelfPhotosAdmin(id); } catch(err) { shPhotos[id] = null; }
+      if (shOpen === id) renderShelfAdmin();
+    }
+    return;
+  }
+  const id = t.dataset.shid || t.dataset.shsave || t.dataset.shdel, r = shRows.find(x => x.id === id); if (!r) return;
+  const d = shDraft[id] = shDraft[id] || { v: r.verdict || "", zh: r.advice_zh || "", en: r.advice_en || "" };
+  if (t.dataset.shv) { d.v = d.v === t.dataset.shv ? "" : t.dataset.shv; renderShelfAdmin(); return; }
+  if (t.dataset.shsave) {
+    if (!d.v) return toast("先选一个标签");
+    t.disabled = true;
+    try {
+      const x = await DB.shelfReview(id, d.v, d.zh.trim(), d.en.trim());
+      Object.assign(r, { verdict: d.v, advice_zh: d.zh.trim(), advice_en: d.en.trim(), reviewed_at: x.reviewed_at || new Date().toISOString(), needs_review: false });
+      delete shDraft[id];
+      if (shelfPend[cur.id]) { shelfPend[cur.id]--; if (!shelfPend[cur.id]) delete shelfPend[cur.id]; }
+      const next = shRows.find(x => x.needs_review);
+      shOpen = next ? next.id : null;
+      renderShelfAdmin(); toast(next ? "已保存，打开下一件待看的" : "已保存，客人端刷新即可看到");
+      if (next && shPhotos[next.id] === undefined) { try { shPhotos[next.id] = await DB.shelfPhotosAdmin(next.id); } catch(err) { shPhotos[next.id] = null; } if (shOpen === next.id) renderShelfAdmin(); }
+    } catch(err) { t.disabled = false; toast("保存失败：" + (err.message || "网络问题")); }
+    return;
+  }
+  if (t.dataset.shdel) {
+    if (!(await ask("删除这件护肤品？", `「${r.name}」和它的照片会从客人的护肤柜里删除。`, "删除"))) return;
+    try {
+      await DB.shelfAdminDelete(id);
+      if (r.needs_review && shelfPend[cur.id]) { shelfPend[cur.id]--; if (!shelfPend[cur.id]) delete shelfPend[cur.id]; }
+      shRows = shRows.filter(x => x.id !== id); shOpen = null; renderShelfAdmin(); toast("已删除");
+    } catch(err) { toast("删除失败：" + (err.message || "")); }
+  }
+});
 
 /* ========== 储值余额（写入只走数据库函数，记录不能改不能删） ========== */
 const { balSum } = window.ONEA;

@@ -24,6 +24,9 @@ window.ONEA_CONFIG = {
   emtEmail: "wyran0319@gmail.com",
   depositAmount: 30,
 
+  // 护肤柜页面「预约 Shelf Edit」按钮：预约系统里 Shelf Edit 项目的 id
+  shelfEditService: "shelf_edit",
+
   // 发给客人的登录链接
   appUrl: "https://theonea.ca/app/",
 
@@ -34,7 +37,7 @@ window.ONEA_CONFIG = {
   memberActiveDays: 365,
   // 会员福利（客人端显示，中英双语）
   memberPerks: [
-    { zh: "每个换季一次 Shelf Edit 护肤柜整理", en: "A seasonal Shelf Edit of your skincare" },
+    { zh: "每季度一次 Shelf Edit 护肤柜整理，会员价 $29", en: "One Shelf Edit each season at the member price, $29" },
     { zh: "优先预约热门时段", en: "Priority booking for popular times" }
   ],
 

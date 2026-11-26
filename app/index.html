@@ -213,6 +213,40 @@ nav button.on{color:var(--ink)}
 .bcard summary{font-size:12.5px;color:var(--ink);cursor:pointer;list-style:none}
 .bcard summary::-webkit-details-marker{display:none}
 .bterms{margin:10px 0 0 18px;font-size:12px;color:#3D3A35;line-height:1.8}
+/* 护肤柜 */
+.field select,.field textarea{width:100%;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:13px 16px;font:inherit;font-size:16px;color:var(--ink);outline:none;-webkit-appearance:none;appearance:none}
+.field textarea{min-height:84px;resize:vertical;line-height:1.6}
+.field select:focus,.field textarea:focus{border-color:var(--ink)}
+.field .req{color:#A0563F}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.shelf-sum{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px}
+.shelf-sum .n{font-size:13px;color:var(--muted);line-height:1.6}
+.shelf-sum .n b{color:var(--ink);font-weight:500;font-family:var(--serif-en);font-size:20px;margin-right:2px}
+.sgroup{font-size:12px;color:var(--muted);letter-spacing:.06em;margin:22px 0 10px}
+.sitem{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px;cursor:pointer}
+.sthumb{flex:none;width:58px;height:58px;border-radius:12px;background:var(--sand-soft) center/cover no-repeat;display:grid;place-items:center;font-family:var(--serif-zh);color:var(--muted);font-size:18px}
+.sitem .info{flex:1;min-width:0}
+.sitem .nm{font-size:15px;line-height:1.4}
+.sitem .meta{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.6}
+.sitem .cnote{font-size:12.5px;color:#5C564C;margin-top:6px;line-height:1.6}
+.sitem .advice{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--sand-soft);font-size:13px;line-height:1.75;color:#3D3A35}
+.sitem .advice small{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+.vpill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;margin-top:7px;border:1px solid var(--sand);color:#5C564C;white-space:nowrap}
+.vpill.keep{background:var(--sand);border-color:var(--sand);color:var(--ink)}
+.vpill.stop{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.vpill.pause,.vpill.duplicate{border-color:#B79A7A;color:#7A5A3A}
+.vpill.wait{border-style:dashed;color:var(--muted)}
+.pslots{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pslot{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.pslot .sthumb.big{width:100%;height:auto;aspect-ratio:1;border-radius:16px;font-size:22px}
+.pslot .plbl{font-size:12.5px;color:var(--muted)}
+.btn.sm{padding:7px 14px;font-size:12.5px}
+.linkbtn{border:0;background:none;font:inherit;font-size:12px;color:var(--muted);text-decoration:underline;cursor:pointer}
+.secard .seprice{display:flex;align-items:baseline;gap:10px;margin:14px 0}
+.secard .seprice b{font-family:var(--serif-en);font-size:30px;font-weight:500}
+.secard .seprice span{font-size:12.5px;color:var(--muted)}
+.sform-acts{display:flex;gap:10px;margin-top:6px}
+.sform-acts .btn{flex:1}
 .hidden{display:none!important}
 </style>
 </head>
@@ -246,6 +280,7 @@ nav button.on{color:var(--ink)}
   <main>
     <div class="view active" id="v-today"></div>
     <div class="view" id="v-journey"></div>
+    <div class="view" id="v-shelf"></div>
     <div class="view" id="v-profile"></div>
     <div class="view" id="v-studio"></div>
   </main>
@@ -253,6 +288,7 @@ nav button.on{color:var(--ink)}
     <div class="inner">
       <button class="on" data-v="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><span data-t="navToday"></span></button>
       <button data-v="journey"><svg viewBox="0 0 24 24"><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><path d="M7 18h6a3 3 0 0 0 0-6h-2a3 3 0 0 1 0-6h6"/></svg><span data-t="navJourney"></span></button>
+      <button data-v="shelf"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M4 12h16"/><path d="M7.5 12V8.5a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1V12M13 12V6.5h2.5V12M8 21v-5.5h2.5V21M13.5 21v-4a1.2 1.2 0 0 1 2.4 0v4"/></svg><span data-t="navShelf"></span></button>
       <button data-v="profile"><svg viewBox="0 0 24 24"><path d="M12 3c4 0 7 3 7 7.5 0 5-3.5 10.5-7 10.5S5 15.5 5 10.5C5 6 8 3 12 3z"/><path d="M9.5 14.5c1.4 1 3.6 1 5 0"/></svg><span data-t="navProfile"></span></button>
       <button data-v="studio"><svg viewBox="0 0 24 24"><path d="M4 20V10l8-6 8 6v10"/><path d="M10 20v-5h4v5"/></svg><span data-t="navStudio"></span></button>
     </div>
@@ -263,7 +299,7 @@ nav button.on{color:var(--ink)}
 <script src="config.js"></script>
 <script src="store.js"></script>
 <script>
-const { CFG, PRESETS, METRICS, JOURNEY, DB, LIVE, membership } = window.ONEA;
+const { CFG, PRESETS, SHELF, METRICS, JOURNEY, DB, LIVE, membership } = window.ONEA;
 
 /* ================= UI TEXT ================= */
 const T = {
@@ -303,7 +339,22 @@ const T = {
     memberPaused:"会员暂停中", memberPausedSub:"距上次到店已超过一年，下次到店后自动恢复。",
     memberPerks:"会员福利", memberPreview:"成为会员后可享", memberInfo:"会员说明", memberInfoSub:"如何成为会员，以及会员福利",
     balTitle:"我的余额", balSplit:"储值 {p} · 赠送 {b}", balNote:"余额长期有效，付款时优先使用赠送额度。",
-    balHistory:"使用记录", balMore:"查看全部 {n} 笔记录", balTerms:"储值条款", balTypes:{topup:"储值充值",bonus:"充值赠送",redeem:"余额付款",refund:"余额退款",adjust:"余额调整"}
+    balHistory:"使用记录", balMore:"查看全部 {n} 笔记录", balTerms:"储值条款", balTypes:{topup:"储值充值",bonus:"充值赠送",redeem:"余额付款",refund:"余额退款",adjust:"余额调整"},
+    navShelf:"护肤柜", shelfTitle:"我的护肤柜", shelfSub:"把家里正在用的护肤品放进来：每件拍正面和成分表两张照片。护理师会在 Shelf Edit 前先看一遍。",
+    shelfCount:"{n} / {m} 件", shelfWaiting:"{n} 件等待护理师查看", shelfAllSeen:"护理师都看过了", shelfAdd:"＋ 添加护肤品", shelfFull:"已经放满 {m} 件，可以先删掉用完的",
+    shelfEmpty:"护肤柜还是空的。先从每天都在用的几件开始——洁面、精华、面霜、防晒。",
+    grpAttention:"需要注意", grpKeep:"保留", grpWaiting:"等待查看",
+    vWait:"等待护理师查看", vRewait:"已修改 · 等待重新查看", adviceBy:"护理师说明", noPhoto:"还没拍成分表",
+    seTitle:"预约 Shelf Edit", seSub:"上传好之后，预约一次 Shelf Edit：到店当面看皮肤，带走你的 Routine Card。",
+    seMember:"会员价 $29", seRegular:"$49 · 会员 $29", sePay:"到店付款", seBook:"预约 Shelf Edit →",
+    fPhotos:"照片", fFront:"正面", fIngr:"成分表", fAddPhoto:"＋ 拍照", fRetake:"重拍", fRemove:"删除照片", fPhotoTip:"正面能看清品牌和名字；成分表拍清楚、不反光就好。", fLoading:"读取照片中…",
+    fName:"产品名称", fBrand:"品牌", fCat:"类型", fUsage:"使用频率", fOpened:"开封日期", fNote:"想告诉护理师的（可选）",
+    fNamePh:"例：修护精华 / B5 修复霜", fBrandPh:"例：理肤泉", fNotePh:"例：用了有点刺痛；朋友推荐但还没开始用", choose:"— 请选择 —",
+    fSave:"保存", fSaving:"保存中…", fCancel:"取消", fDelete:"删除这件", fEditTitle:"修改护肤品", fNewTitle:"添加护肤品",
+    delAsk:"确定从护肤柜删除「{n}」吗？用完或扔掉了都可以删除。",
+    sSaved:"已放进护肤柜", sUpdated:"已更新", sDeleted:"已删除",
+    eNameReq:"请填写产品名称", ePhoto:"照片太大，请换一张再试", eTooMany:"护肤柜最多放 20 件", eSave:"没有保存成功，请稍后再试",
+    eNotReady:"护肤柜还在准备中，请稍后再来看看。", eLoad:"网络不稳定，护肤柜暂时打不开。", opened:"开封 {a}"
   },
   en: {
     loginTitle:"Your skin profile", loginSub:"Sign in with the phone number and access code from the studio",
@@ -341,7 +392,22 @@ const T = {
     memberPaused:"Membership paused", memberPausedSub:"It's been over a year since your last visit. It resumes as soon as you come in.",
     memberPerks:"Member benefits", memberPreview:"As a member, you'll enjoy", memberInfo:"Membership", memberInfoSub:"How it works and what members receive",
     balTitle:"My Balance", balSplit:"Prepaid {p} · Bonus {b}", balNote:"Your balance never expires. Bonus is used first when you pay.",
-    balHistory:"History", balMore:"See all {n} transactions", balTerms:"Balance terms", balTypes:{topup:"Top-up",bonus:"Bonus",redeem:"Paid from balance",refund:"Refund",adjust:"Adjustment"}
+    balHistory:"History", balMore:"See all {n} transactions", balTerms:"Balance terms", balTypes:{topup:"Top-up",bonus:"Bonus",redeem:"Paid from balance",refund:"Refund",adjust:"Adjustment"},
+    navShelf:"Shelf", shelfTitle:"My Shelf", shelfSub:"Add the skincare you use at home — two photos of each: the front and the ingredient list. Your therapist will look through them before your Shelf Edit.",
+    shelfCount:"{n} of {m}", shelfWaiting:"{n} waiting for your therapist", shelfAllSeen:"All reviewed by your therapist", shelfAdd:"＋ Add a product", shelfFull:"Your shelf is full ({m}). Remove products you've finished to add more.",
+    shelfEmpty:"Your shelf is empty. Start with what you use every day — cleanser, serum, moisturizer, sunscreen.",
+    grpAttention:"Needs attention", grpKeep:"Keep", grpWaiting:"Waiting for review",
+    vWait:"Waiting for your therapist", vRewait:"Updated · waiting for review", adviceBy:"From your therapist", noPhoto:"No ingredient photo yet",
+    seTitle:"Book a Shelf Edit", seSub:"Once your products are in, book a Shelf Edit — we'll look at your skin together and you'll take home your Routine Card.",
+    seMember:"Member price $29", seRegular:"$49 · members $29", sePay:"Pay at the studio", seBook:"Book a Shelf Edit →",
+    fPhotos:"Photos", fFront:"Front", fIngr:"Ingredients", fAddPhoto:"＋ Photo", fRetake:"Retake", fRemove:"Remove photo", fPhotoTip:"Front: brand and name visible. Ingredients: clear, without glare.", fLoading:"Loading photos…",
+    fName:"Product name", fBrand:"Brand", fCat:"Type", fUsage:"How often you use it", fOpened:"Date opened", fNote:"Anything to tell your therapist (optional)",
+    fNamePh:"e.g. Repair serum / B5 balm", fBrandPh:"e.g. La Roche-Posay", fNotePh:"e.g. It stings a little; a friend recommended it but I haven't started", choose:"— Select —",
+    fSave:"Save", fSaving:"Saving…", fCancel:"Cancel", fDelete:"Remove", fEditTitle:"Edit product", fNewTitle:"Add a product",
+    delAsk:"Remove “{n}” from your shelf? You can remove products you've finished or thrown away.",
+    sSaved:"Added to your shelf", sUpdated:"Updated", sDeleted:"Removed",
+    eNameReq:"Please enter the product name", ePhoto:"That photo is too large — please try another", eTooMany:"Your shelf can hold up to 20 products", eSave:"Couldn't save — please try again",
+    eNotReady:"My Shelf is still being set up. Please check back soon.", eLoad:"Connection problem — your shelf can't be opened right now.", opened:"Opened {a}"
   }
 };
 
@@ -387,8 +453,9 @@ async function doLogin(phone, code, silent){
     client = r.client; store.set("session", {phone, code});
     balance = store.get("balance", null);   // 先显示上次的，再刷新
     DB.clientBalance(phone, code).then(b => { if (b && b.ok && client) { balance = b; store.set("balance", b); renderProfile(); } }).catch(()=>{});
+    shelf = store.get("shelf", null); shelfErr = ""; shelfEdit = null;
     $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
-    renderAll(); return;
+    renderAll(); loadShelf(); return;
   }
   if (r && r.error==="network" && silent) {
     const cached = store.get("cache", null);  // offline: show last known profile
@@ -408,7 +475,7 @@ $("#login-form").addEventListener("submit", e => {
 /* ================= RENDER ================= */
 function renderAll(){
   store.set("cache", client);
-  applyStatic(); renderToday(); renderJourney(); renderProfile(); renderStudio();
+  applyStatic(); renderToday(); renderJourney(); renderShelf(); renderProfile(); renderStudio();
 }
 
 function journeyState(){
@@ -609,6 +676,149 @@ function memberCard(d){
     ${perks?`<ul class="perks"><small>${t("memberPreview")}</small>${perks}</ul>`:""}</div>`;
 }
 
+/* ================= 护肤柜 MY SHELF ================= */
+let shelf = null, shelfErr = "", shelfEdit = null, shelfBusy = false;
+const SH = (group, k) => k && SHELF[group][k] ? L(SHELF[group][k]) : "";
+const creds = () => store.get("session", {}) || {};
+async function loadShelf(){
+  const s = creds(), r = await DB.shelfList(s.phone, s.code);
+  if (!client) return;
+  if (r && r.ok) { shelf = { limit: r.limit || SHELF.limit, items: r.items || [] }; shelfErr = ""; store.set("shelf", shelf); }
+  else shelfErr = r && r.error === "not_ready" ? "eNotReady" : "eLoad";
+  if (!shelfEdit) renderShelf();
+}
+const thumbBox = (src, txt, cls="") => src ? `<div class="sthumb ${cls}" style="background-image:url('${esc(src)}')"></div>` : `<div class="sthumb ${cls}">${esc(txt||"")}</div>`;
+function shelfItem(it){
+  const meta = [it.brand, SH("category", it.category)].filter(Boolean).map(esc).join(" · ");
+  const meta2 = [SH("usage", it.usage), it.opened ? t("opened",{a:fmt(it.opened)}) : ""].filter(Boolean).join(" · ");
+  const advice = lang==="en" ? (it.advice_en || it.advice_zh) : (it.advice_zh || it.advice_en);
+  const vp = it.verdict ? `<span class="vpill ${it.verdict}">${SH("verdict", it.verdict)}</span> ` : "";
+  const wait = it.needs_review ? `<span class="vpill wait">${t(it.verdict ? "vRewait" : "vWait")}</span>` : "";
+  return `<div class="sitem" data-sid="${esc(it.id)}">${thumbBox(it.thumb, (it.name||"·").trim().slice(0,1))}
+    <div class="info"><div class="nm">${esc(it.name)}</div>
+      ${meta?`<div class="meta">${meta}</div>`:""}${meta2?`<div class="meta">${meta2}</div>`:""}
+      ${!it.has_ingredients?`<div class="meta" style="color:#A0563F">${t("noPhoto")}</div>`:""}
+      ${it.note?`<div class="cnote">“${esc(it.note)}”</div>`:""}
+      <div>${vp}${wait}</div>
+      ${advice?`<div class="advice"><small>${t("adviceBy")}</small>${esc(advice)}</div>`:""}
+    </div></div>`;
+}
+function shelfEditCard(){
+  const m = membership(client.data, ymd(today)), mem = m.status === "member";
+  const url = (CFG.bookingUrl || "https://theonea.ca/book/") + (String(CFG.bookingUrl||"").includes("?") ? "&" : "?") + "s=" + encodeURIComponent(CFG.shelfEditService || "shelf_edit");
+  return `<section><div class="card secard"><div class="sec-head" style="margin-bottom:6px"><h2>${t("seTitle")}</h2><span class="eyebrow">Shelf Edit</span></div>
+    <p class="sub">${t("seSub")}</p>
+    <div class="seprice"><b>${mem ? "$29" : "$49"}</b><span>${t(mem ? "seMember" : "seRegular")} · ${t("sePay")}</span></div>
+    <a class="btn solid full" href="${esc(url)}" target="_blank" rel="noopener">${t("seBook")}</a></div></section>`;
+}
+function renderShelf(){
+  const box = $("#v-shelf"); if (!box || !client) return;
+  const head = `<div class="eyebrow">My Shelf</div><h1>${t("shelfTitle")}</h1><p class="sub">${t("shelfSub")}</p>`;
+  if (shelfEdit) { box.innerHTML = head + shelfForm(); bindShelfForm(); return; }
+  if (!shelf) { box.innerHTML = head + `<section><p class="empty">${shelfErr ? t(shelfErr) : "…"}</p></section>`; return; }
+  const items = shelf.items || [], lim = shelf.limit || SHELF.limit, full = items.length >= lim;
+  const waiting = items.filter(x=>x.needs_review).length;
+  let body = `<div class="shelf-sum"><div class="n"><b>${t("shelfCount",{n:items.length,m:lim})}</b><br>${items.length ? (waiting ? t("shelfWaiting",{n:waiting}) : t("shelfAllSeen")) : ""}</div>
+    <button class="btn solid" id="shelf-add" ${full?"disabled":""}>${t("shelfAdd")}</button></div>`;
+  if (full) body += `<p class="sub" style="margin-top:8px">${t("shelfFull",{m:lim})}</p>`;
+  if (shelfErr) body += `<p class="sub" style="margin-top:10px;color:#A0563F">${t(shelfErr)}</p>`;
+  if (!items.length) body += `<section><div class="card"><p class="sub">${t("shelfEmpty")}</p></div></section>`;
+  else {
+    const grp = (k, arr) => arr.length ? `<div class="sgroup">${t(k)} · ${arr.length}</div>${arr.map(shelfItem).join("")}` : "";
+    body += `<section style="margin-top:6px">${grp("grpAttention", items.filter(x=>["stop","pause","duplicate"].includes(x.verdict)))}${grp("grpWaiting", items.filter(x=>!x.verdict))}${grp("grpKeep", items.filter(x=>x.verdict==="keep"))}</section>`;
+  }
+  box.innerHTML = head + body + shelfEditCard() + `<div class="foot">${t("footProfile")}</div>`;
+  $("#shelf-add").onclick = () => { shelfEdit = { name:"", brand:"", category:"", usage:"", opened:"", note:"", front:null, ingredients:null, changed:{} }; renderShelf(); window.scrollTo({top:0}); };
+  box.querySelectorAll(".sitem[data-sid]").forEach(el => el.onclick = () => {
+    const it = items.find(x => String(x.id) === el.dataset.sid); if (!it) return;
+    shelfEdit = { id: it.id, name: it.name||"", brand: it.brand||"", category: it.category||"", usage: it.usage||"", opened: it.opened||"", note: it.note||"",
+      front: null, ingredients: null, changed: {}, loading: !!(it.has_front || it.has_ingredients), thumb: it.thumb };
+    renderShelf(); window.scrollTo({top:0});
+    if (shelfEdit.loading) { const id = it.id, s = creds();
+      DB.shelfPhotos(s.phone, s.code, id).then(r => { if (!shelfEdit || shelfEdit.id !== id) return; shelfEdit.loading = false;
+        if (r && r.ok) { if (!shelfEdit.changed.front) shelfEdit.front = r.front; if (!shelfEdit.changed.ingredients) shelfEdit.ingredients = r.ingredients; }
+        renderShelf(); }); }
+  });
+}
+function shelfForm(){
+  const e = shelfEdit;
+  const sel = (group, val) => `<option value="">${t("choose")}</option>` + Object.keys(SHELF[group]).map(k=>`<option value="${k}" ${k===val?"selected":""}>${SH(group,k)}</option>`).join("");
+  const slot = (k, label) => { const src = e[k] || (k==="front" && e.loading ? e.thumb : null);
+    return `<div class="pslot">${thumbBox(src, e.loading ? "…" : "", "big")}<div class="plbl">${label}</div>
+      <label class="btn ghost sm">${t(e[k]?"fRetake":"fAddPhoto")}<input type="file" accept="image/*" data-photo="${k}"></label>
+      ${e[k]?`<button type="button" class="linkbtn" data-rmphoto="${k}">${t("fRemove")}</button>`:""}</div>`; };
+  return `<section><div class="card">
+    <h2 style="margin-bottom:14px">${t(e.id?"fEditTitle":"fNewTitle")}</h2>
+    <div class="field"><label>${t("fPhotos")}</label><div class="pslots">${slot("front", t("fFront"))}${slot("ingredients", t("fIngr"))}</div>
+      <p class="sub" style="font-size:12px;margin-top:8px">${e.loading ? t("fLoading") : t("fPhotoTip")}</p></div>
+    <div class="field"><label>${t("fName")} <span class="req">*</span></label><input data-sf="name" value="${esc(e.name)}" placeholder="${esc(t("fNamePh"))}" maxlength="120"></div>
+    <div class="field"><label>${t("fBrand")}</label><input data-sf="brand" value="${esc(e.brand)}" placeholder="${esc(t("fBrandPh"))}" maxlength="120"></div>
+    <div class="two">
+      <div class="field"><label>${t("fCat")}</label><select data-sf="category">${sel("category", e.category)}</select></div>
+      <div class="field"><label>${t("fUsage")}</label><select data-sf="usage">${sel("usage", e.usage)}</select></div>
+    </div>
+    <div class="field"><label>${t("fOpened")}</label><input type="date" data-sf="opened" value="${esc(e.opened)}" max="${ymd(today)}"></div>
+    <div class="field"><label>${t("fNote")}</label><textarea data-sf="note" placeholder="${esc(t("fNotePh"))}" maxlength="1000">${esc(e.note)}</textarea></div>
+    <div class="err" id="sf-err"></div>
+    <div class="sform-acts"><button class="btn ghost" id="sf-cancel">${t("fCancel")}</button><button class="btn solid" id="sf-save" ${e.loading?"disabled":""}>${t("fSave")}</button></div>
+    ${e.id?`<button class="btn ghost" style="width:100%;margin-top:12px;border-color:#C9A99A;color:#A0563F" id="sf-del">${t("fDelete")}</button>`:""}
+  </div></section>`;
+}
+function shrink(img, maxSide, limit){
+  const s = Math.min(1, maxSide/Math.max(img.width, img.height)), c = document.createElement("canvas");
+  c.width = Math.round(img.width*s); c.height = Math.round(img.height*s); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  let q = .78, d = c.toDataURL("image/jpeg", q);
+  while (d.length > limit && q > .35) { q -= .08; d = c.toDataURL("image/jpeg", q); }
+  return d;
+}
+function loadImg(src){ return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+function bindShelfForm(){
+  const box = $("#v-shelf");
+  box.querySelectorAll("[data-sf]").forEach(el => el.addEventListener("input", () => { shelfEdit[el.dataset.sf] = el.value; }));
+  box.querySelectorAll("[data-photo]").forEach(inp => inp.onchange = async ev => {
+    const f = ev.target.files[0], k = inp.dataset.photo; if (!f) return;
+    const url = URL.createObjectURL(f);
+    try {
+      const img = await loadImg(url);
+      // 成分表需要看清小字，保留更大的尺寸
+      shelfEdit[k] = shrink(img, k === "ingredients" ? 1400 : 900, 360000);
+      shelfEdit.changed[k] = true; renderShelf();
+    } catch (e) { $("#sf-err").textContent = t("ePhoto"); }
+    URL.revokeObjectURL(url);
+  });
+  box.querySelectorAll("[data-rmphoto]").forEach(b => b.onclick = () => { const k = b.dataset.rmphoto; shelfEdit[k] = null; shelfEdit.changed[k] = true; renderShelf(); });
+  $("#sf-cancel").onclick = () => { shelfEdit = null; renderShelf(); };
+  $("#sf-save").onclick = async () => {
+    if (shelfBusy) return;
+    const e = shelfEdit;
+    if (!e.name.trim()) { $("#sf-err").textContent = t("eNameReq"); return; }
+    const btn = $("#sf-save"); shelfBusy = true; btn.disabled = true; btn.textContent = t("fSaving");
+    const item = { name: e.name, brand: e.brand, category: e.category, usage: e.usage, opened: e.opened, note: e.note };
+    try {
+      if (e.changed.front) item.front = e.front || "";
+      if (e.changed.ingredients) item.ingredients = e.ingredients || "";
+      if (e.changed.front || (e.changed.ingredients && !e.front)) {
+        const src = e.front || e.ingredients;
+        item.thumb = src ? shrink(await loadImg(src), 220, 30000) : "";
+      }
+    } catch (err) {}
+    const s = creds(), isNew = !e.id;
+    const r = await DB.shelfSave(s.phone, s.code, e.id, item);
+    shelfBusy = false;
+    if (r && r.ok) { shelfEdit = null; toast(t(isNew?"sSaved":"sUpdated")); await loadShelf(); renderShelf(); return; }
+    btn.disabled = false; btn.textContent = t("fSave");
+    const ek = { name_required:"eNameReq", photo_too_big:"ePhoto", too_many:"eTooMany", not_ready:"eNotReady" }[r && r.error] || "eSave";
+    $("#sf-err").textContent = t(ek);
+  };
+  const del = $("#sf-del");
+  if (del) del.onclick = async () => {
+    if (!confirm(t("delAsk",{n:shelfEdit.name}))) return;
+    const s = creds(), r = await DB.shelfDelete(s.phone, s.code, shelfEdit.id);
+    if (r && r.ok) { shelfEdit = null; toast(t("sDeleted")); await loadShelf(); renderShelf(); }
+    else $("#sf-err").textContent = t("eSave");
+  };
+}
+
 function renderStudio(){
   const a = (href, title, sub) => `<a href="${esc(href)}" target="_blank" rel="noopener"><div>${title}<small>${sub}</small></div><span class="arrow">→</span></a>`;
   $("#v-studio").innerHTML = `
@@ -625,7 +835,7 @@ function renderStudio(){
       <div class="card howto">${t("installText")}</div></section>
     <button class="btn ghost logout" id="logout">${t("logout")}</button>
     <div class="foot">Inspired by global skincare traditions.<br>Thoughtfully refined for your skin.</div>`;
-  $("#logout").onclick = () => { store.del("session"); store.del("cache"); store.del("balance"); client=null; balance=null; balAll=false; $("#in-code").value=""; applyStatic(); showLogin(); };
+  $("#logout").onclick = () => { store.del("session"); store.del("cache"); store.del("balance"); store.del("shelf"); client=null; balance=null; balAll=false; shelf=null; shelfEdit=null; $("#in-code").value=""; applyStatic(); showLogin(); };
 }
 
 /* ================= NAV ================= */

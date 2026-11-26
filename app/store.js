@@ -46,6 +46,39 @@
     }
   };
 
+  /* ---------- 护肤柜 / My Shelf ---------- */
+  const SHELF = {
+    category: {
+      cleanser: { zh: "洁面 / 卸妆", en: "Cleanser / makeup remover" },
+      toner: { zh: "化妆水 / 爽肤水", en: "Toner / essence water" },
+      serum: { zh: "精华", en: "Serum" },
+      moisturizer: { zh: "乳液 / 面霜", en: "Lotion / cream" },
+      eye: { zh: "眼霜", en: "Eye cream" },
+      sunscreen: { zh: "防晒", en: "Sunscreen" },
+      exfoliant: { zh: "酸类 / 去角质", en: "Acids / exfoliant" },
+      retinoid: { zh: "A醇 / 视黄醇", en: "Retinoid" },
+      mask: { zh: "面膜", en: "Mask" },
+      oil: { zh: "面部油", en: "Face oil" },
+      tool: { zh: "美容仪 / 工具", en: "Device / tool" },
+      other: { zh: "其他", en: "Other" }
+    },
+    usage: {
+      am: { zh: "早上用", en: "Mornings" },
+      pm: { zh: "晚上用", en: "Evenings" },
+      both: { zh: "早晚都用", en: "Morning & evening" },
+      weekly: { zh: "每周几次", en: "A few times a week" },
+      sometimes: { zh: "偶尔用", en: "Now and then" },
+      not_using: { zh: "目前没在用", en: "Not using now" }
+    },
+    verdict: {
+      keep: { zh: "保留", en: "Keep" },
+      pause: { zh: "暂停", en: "Pause" },
+      duplicate: { zh: "重复", en: "Duplicate" },
+      stop: { zh: "停用", en: "Stop" }
+    },
+    limit: 20
+  };
+
   const METRICS = [
     { key: "hydration", zh: "水分", en: "Hydration" },
     { key: "barrier", zh: "屏障", en: "Barrier" },
@@ -380,6 +413,65 @@
       if (!LIVE) return balDemo.adjust(clientId, type, paidCents, bonusCents, note);
       return balRpc("balance_adjust", { p_client: clientId, p_type: type, p_paid_cents: paidCents || 0, p_bonus_cents: bonusCents || 0, p_note: note || "" });
     },
+    /* ---------- 护肤柜：客人自己写（验证手机号+访问码），你在后台打标签 ---------- */
+    async shelfList(phone, code) {
+      if (!LIVE) { const c = demoFind(phone, code); return c ? { ok: true, limit: SHELF.limit, items: shelfDemo.rows(c.id) } : { ok: false, error: "nomatch" }; }
+      return shelfRpc("shelf_list", { p_phone: normPhone(phone), p_code: String(code || "").trim() });
+    },
+    async shelfPhotos(phone, code, id) {
+      if (!LIVE) { const c = demoFind(phone, code); if (!c) return { ok: false }; const p = shelfDemo.photos()[id] || {}; return { ok: true, front: p.front || null, ingredients: p.ingredients || null }; }
+      return shelfRpc("shelf_photos_get", { p_phone: normPhone(phone), p_code: String(code || "").trim(), p_id: id });
+    },
+    // item: name, brand, category, usage, opened, note；照片键（thumb/front/ingredients）只在有改动时才带
+    async shelfSave(phone, code, id, item) {
+      if (!LIVE) {
+        const c = demoFind(phone, code); if (!c) return { ok: false, error: "nomatch" };
+        if (!String(item.name || "").trim()) return { ok: false, error: "name_required" };
+        return shelfDemo.save(c.id, id, item);
+      }
+      return shelfRpc("shelf_save", { p_phone: normPhone(phone), p_code: String(code || "").trim(), p_id: id || null, p_item: item });
+    },
+    async shelfDelete(phone, code, id) {
+      if (!LIVE) { const c = demoFind(phone, code); if (!c) return { ok: false, error: "nomatch" }; shelfDemo.del(c.id, id); return { ok: true }; }
+      return shelfRpc("shelf_delete", { p_phone: normPhone(phone), p_code: String(code || "").trim(), p_id: id });
+    },
+    async shelfForClient(clientId) {   // 后台：不含大图
+      if (!clientId) return [];
+      if (!LIVE) return shelfDemo.rows(clientId);
+      const db = await sb();
+      const { data, error } = await db.from("shelf_items").select("id,client_id,name,brand,category,usage,opened,note,thumb,verdict,advice_zh,advice_en,created_at,updated_at,reviewed_at,needs_review").eq("client_id", clientId).order("created_at", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    async shelfPhotosAdmin(id) {
+      if (!LIVE) { const p = shelfDemo.photos()[id] || {}; return { front: p.front || null, ingredients: p.ingredients || null }; }
+      const db = await sb();
+      const { data, error } = await db.from("shelf_photos").select("front,ingredients").eq("item_id", id).maybeSingle();
+      if (error) throw error;
+      return data || {};
+    },
+    async shelfPending() {   // { client_id: 待查看件数 }
+      const rows = !LIVE ? shelfDemo.all().filter(needsReview) : await (async () => {
+        const db = await sb();
+        const { data, error } = await db.from("shelf_items").select("client_id").eq("needs_review", true).limit(2000);
+        if (error) throw error; return data;
+      })();
+      return rows.reduce((m, r) => (m[r.client_id] = (m[r.client_id] || 0) + 1, m), {});
+    },
+    async shelfAdminDelete(id) {
+      if (!LIVE) { shelfDemo.put(shelfDemo.all().filter(r => r.id !== id)); const ph = shelfDemo.photos(); delete ph[id]; shelfDemo.putPhotos(ph); return; }
+      const db = await sb();
+      const { error } = await db.from("shelf_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    async shelfReview(id, verdict, zh, en) {
+      if (!LIVE) return shelfDemo.review(id, verdict, zh, en);
+      const db = await sb();
+      const { data, error } = await db.rpc("shelf_review", { p_id: id, p_verdict: verdict || null, p_advice_zh: zh || "", p_advice_en: en || "" });
+      if (error) throw new Error(String(error.message || "").includes("function") ? "请先在 Supabase 运行 shelf.sql" : error.message);
+      return data;
+    },
+
     async clientBalance(phone, code) {
       if (!LIVE) {
         const c = demoLoad().find(x => x.phone === normPhone(phone) && x.code === String(code || "").trim());
@@ -438,9 +530,55 @@
       return this.add(cid, [{ type, paid_cents: p, bonus_cents: b, label_zh: type === "refund" ? "余额退款" : "余额调整", label_en: type === "refund" ? "Refund" : "Adjustment", note }]);
     }
   };
+  /* ---------- 护肤柜：共用工具 + 演示模式 ---------- */
+  function demoFind(phone, code) { return demoLoad().find(x => x.phone === normPhone(phone) && x.code === String(code || "").trim()); }
+  const needsReview = r => !r.reviewed_at || r.updated_at > r.reviewed_at;
+  async function shelfRpc(fn, args) {
+    try {
+      const db = await sb();
+      const { data, error } = await db.rpc(fn, args);
+      if (error) return { ok: false, error: /function|schema cache/.test(String(error.message || "")) ? "not_ready" : "network" };
+      return data;
+    } catch (e) { return { ok: false, error: "network" }; }
+  }
+  const shelfDemo = {
+    KEY: "onea:demo-shelf", PKEY: "onea:demo-shelf-photos",
+    all() { try { return JSON.parse(localStorage.getItem(this.KEY) || "[]"); } catch (e) { return []; } },
+    put(rows) { try { localStorage.setItem(this.KEY, JSON.stringify(rows)); return true; } catch (e) { return false; } },
+    photos() { try { return JSON.parse(localStorage.getItem(this.PKEY) || "{}"); } catch (e) { return {}; } },
+    putPhotos(p) { try { localStorage.setItem(this.PKEY, JSON.stringify(p)); return true; } catch (e) { return false; } },
+    rows(cid) {
+      const ph = this.photos();
+      return this.all().filter(r => r.client_id === cid).map(r => ({ ...r, needs_review: needsReview(r),
+        verdict: r.reviewed_at ? r.verdict : null, has_front: !!ph[r.id]?.front, has_ingredients: !!ph[r.id]?.ingredients }))
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    },
+    save(cid, id, it) {
+      const all = this.all(), now = new Date().toISOString();
+      const fields = { name: String(it.name).trim(), brand: it.brand || "", category: it.category || "", usage: it.usage || "", opened: it.opened || "", note: it.note || "" };
+      if (id) { const r = all.find(x => x.id === id && x.client_id === cid); if (!r) return { ok: false, error: "not_found" }; Object.assign(r, fields, { updated_at: now }); }
+      else {
+        if (all.filter(x => x.client_id === cid).length >= SHELF.limit) return { ok: false, error: "too_many" };
+        id = "s" + Date.now().toString(36); all.push({ id, client_id: cid, ...fields, thumb: "", verdict: null, advice_zh: "", advice_en: "", created_at: now, updated_at: now, reviewed_at: null });
+      }
+      const r = all.find(x => x.id === id); if ("thumb" in it) r.thumb = it.thumb || "";
+      const ph = this.photos(), p = ph[id] || {};
+      if ("front" in it) p.front = it.front || null;
+      if ("ingredients" in it) p.ingredients = it.ingredients || null;
+      ph[id] = p;
+      return this.put(all) && this.putPhotos(ph) ? { ok: true, id } : { ok: false, error: "photo_too_big" };
+    },
+    del(cid, id) { this.put(this.all().filter(r => !(r.id === id && r.client_id === cid))); const ph = this.photos(); delete ph[id]; this.putPhotos(ph); },
+    review(id, verdict, zh, en) {
+      const all = this.all(), r = all.find(x => x.id === id); if (!r) throw new Error("not_found");
+      Object.assign(r, { verdict: verdict || null, advice_zh: zh || "", advice_en: en || "", reviewed_at: new Date(Date.now() + 1).toISOString() });
+      this.put(all); return { ...r, needs_review: false };
+    }
+  };
+
   // persist demo writes made via saveClient
   const _save = DB.saveClient;
   DB.saveClient = async c => { const r = await _save(c); if (!LIVE) demoSave(); return r; };
 
-  window.ONEA = { CFG, LIVE, PRESETS, METRICS, JOURNEY, DB, blankData, normPhone, bi, membership, balSum };
+  window.ONEA = { CFG, LIVE, PRESETS, SHELF, METRICS, JOURNEY, DB, blankData, normPhone, bi, membership, balSum };
 })();
