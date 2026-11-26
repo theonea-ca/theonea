@@ -104,6 +104,9 @@ html[data-lang=en] .svc .n{font-family:var(--disp);font-size:19px}
 #toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);font:400 13px var(--sans);padding:10px 18px;border-radius:99px;opacity:0;transition:.3s;pointer-events:none;z-index:40}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 .loading{font:300 13.5px var(--sans);color:var(--mute);padding:30px 0;text-align:center}
+.paycard{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 4px;padding:14px 16px;border:1px solid var(--sand);border-radius:14px}
+.paycard>span{font:400 14px var(--sans)}
+.paycard small{flex-basis:100%;font:300 12.5px/1.6 var(--sans);color:var(--mute)}
 </style>
 </head>
 <body>
@@ -182,6 +185,7 @@ const CATS = [
   {k:"ipl", zh:"超光子", en:"Super IPL", cats:["ipl"], note:{zh:"先评估再护理，可安排肤测试。第一次做建议先预约「新客皮肤初见」。时长为参考时间，实际通常更短。",en:"Assessment first; patch test available. First-timers, consider the First Visit ritual. Times are estimates — sessions are usually shorter."}},
   {k:"dpl", zh:"DPL 脱毛", en:"DPL hair removal", cats:["dpl"], note:{zh:"可同时选多个部位。价格包含双侧（如适用）。时长为参考时间，实际通常更短。6 次疗程买 5 送 1，请到店咨询。",en:"Select several areas if you like. Prices include both sides. Times are estimates — sessions are usually shorter. 6-session series (buy 5, get 1) — ask in studio."}},
   {k:"body", zh:"身体护理", en:"Body care", cats:["body"], note:{zh:"仅限女性客户。",en:"Female clients only."}},
+  {k:"shelf", zh:"Shelf Edit 护肤柜整理", en:"Shelf Edit", cats:["shelf"], note:{zh:"预约前请先在 app「护肤柜」上传正在用的产品（正面 + 成分表）。原价 $49，会员 $29，到店按会员身份结算；$30 订金可抵扣。",en:"Before booking, add the products you use to My Shelf in the app (front + ingredient list). $49, or $29 for members, settled at the studio; your $30 deposit is applied to it."}},
 ];
 
 const $ = s => document.querySelector(s);
@@ -372,6 +376,7 @@ function renderDone(){
     <div class="kv"><span>${bi("方式","Method")}</span><b>Interac e-Transfer</b></div>
     <div class="kv"><span>${bi("收款邮箱","Send to")}</span><b>${esc(CFG.emtEmail||"")}</b><button class="btn o sm" type="button" data-copy="${esc(CFG.emtEmail||"")}">${bi("复制","Copy")}</button></div>
     <div class="kv"><span>${bi("备注填写","Message")}</span><b>${esc(r.ref)}</b><button class="btn o sm" type="button" data-copy="${esc(r.ref)}">${bi("复制","Copy")}</button></div>
+    ${CFG.depositPayUrl ? `<div class="paycard"><span>${bi("或用银行卡付款","Or pay by card")}</span><a class="btn sm" href="${esc(CFG.depositPayUrl)}" target="_blank" rel="noopener">${bi(`刷卡付 $${DEPOSIT} →`,`Pay $${DEPOSIT} by card →`)}</a><small>${bi(`付款时请填写和预约相同的姓名和邮箱，方便我们核对（预约号 ${esc(r.ref)}）。`,`Please use the same name and email as your booking so we can match it (booking ${esc(r.ref)}).`)}</small></div>` : ""}
     <div class="due">${bi(`请在 ${dueT} 前付款（1 小时内），超时时段会自动释放。`,`Please send it by ${dueT} (within 1 hour), or the time will be released.`)}</div>
     <p style="font:300 13px/1.7 var(--sans);color:var(--mute);margin:10px 0 0">${bi(`付款方式也已发到你的邮箱 ${esc(state.email)}（没收到请看垃圾邮件）。收到订金后会再发一封确认邮件。`,`We've also emailed these details to ${esc(state.email)} (check spam if you don't see it). You'll get a confirmation email once the deposit arrives.`)}</p>`;
   $("#sum4").innerHTML = summaryHTML();
