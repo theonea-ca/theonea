@@ -27,7 +27,7 @@ window.ONEA_CONFIG = {
   // 预约订金 $30：显示在预约成功页，和 e-Transfer 并列
   depositPayUrl: "",
   // Shelf Edit：会员 $29 / 非会员 $49 各建一个链接，护肤柜页面会按客人身份显示对应的那个
-  shelfEditPayUrl: { member: "https://square.link/u/9K4paUBq", regular: "" },
+  shelfEditPayUrl: { member: "", regular: "" },
 
   // 护肤柜页面「预约 Shelf Edit」按钮：预约系统里 Shelf Edit 项目的 id
   shelfEditService: "shelf_edit",
