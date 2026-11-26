@@ -199,6 +199,20 @@ nav button.on{color:var(--ink)}
 .btn:disabled{opacity:.5}
 .empty{font-size:13px;color:var(--muted);padding:6px 0}
 .logout{margin-top:14px;width:100%}
+/* balance */
+.bcard .bhead{display:flex;justify-content:space-between;align-items:baseline}
+.bcard .btotal{font-family:var(--serif-en);font-size:34px;font-weight:500;margin:6px 0 2px;letter-spacing:.02em}
+.bcard .bsplit{font-size:12.5px;color:var(--muted)}
+.bcard .bnote{font-size:12px;color:var(--muted);margin-top:8px}
+.btx{list-style:none;margin-top:12px;border-top:1px solid var(--line)}
+.btx li{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.btx li:last-child{border-bottom:0}
+.btx small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.btx .a{white-space:nowrap;font-family:var(--serif-en);font-size:15px}
+.bcard details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.bcard summary{font-size:12.5px;color:var(--ink);cursor:pointer;list-style:none}
+.bcard summary::-webkit-details-marker{display:none}
+.bterms{margin:10px 0 0 18px;font-size:12px;color:#3D3A35;line-height:1.8}
 .hidden{display:none!important}
 </style>
 </head>
@@ -287,7 +301,9 @@ const T = {
     memberUntil:"会员有效至 {a}", memberForever:"储值会员持续有效", visitsCount:"已到店 {n} 次",
     memberToGo:"再来 {n} 次，即成为会员", memberToGoOne:"再来 1 次，即成为会员", memberOr:"来满 {m} 次自动成为会员，也可以选择储值。",
     memberPaused:"会员暂停中", memberPausedSub:"距上次到店已超过一年，下次到店后自动恢复。",
-    memberPerks:"会员福利", memberPreview:"成为会员后可享", memberInfo:"会员说明", memberInfoSub:"如何成为会员，以及会员福利"
+    memberPerks:"会员福利", memberPreview:"成为会员后可享", memberInfo:"会员说明", memberInfoSub:"如何成为会员，以及会员福利",
+    balTitle:"我的余额", balSplit:"储值 {p} · 赠送 {b}", balNote:"余额长期有效，付款时优先使用赠送额度。",
+    balHistory:"使用记录", balMore:"查看全部 {n} 笔记录", balTerms:"储值条款", balTypes:{topup:"储值充值",bonus:"充值赠送",redeem:"余额付款",refund:"余额退款",adjust:"余额调整"}
   },
   en: {
     loginTitle:"Your skin profile", loginSub:"Sign in with the phone number and access code from the studio",
@@ -323,7 +339,9 @@ const T = {
     memberUntil:"Active until {a}", memberForever:"Prepaid membership stays active", visitsCount:"{n} visits so far",
     memberToGo:"{n} more visits to become a member", memberToGoOne:"One more visit to become a member", memberOr:"You become a member after {m} visits, or when you choose to prepay.",
     memberPaused:"Membership paused", memberPausedSub:"It's been over a year since your last visit. It resumes as soon as you come in.",
-    memberPerks:"Member benefits", memberPreview:"As a member, you'll enjoy", memberInfo:"Membership", memberInfoSub:"How it works and what members receive"
+    memberPerks:"Member benefits", memberPreview:"As a member, you'll enjoy", memberInfo:"Membership", memberInfoSub:"How it works and what members receive",
+    balTitle:"My Balance", balSplit:"Prepaid {p} · Bonus {b}", balNote:"Your balance never expires. Bonus is used first when you pay.",
+    balHistory:"History", balMore:"See all {n} transactions", balTerms:"Balance terms", balTypes:{topup:"Top-up",bonus:"Bonus",redeem:"Paid from balance",refund:"Refund",adjust:"Adjustment"}
   }
 };
 
@@ -334,6 +352,7 @@ const store = {
   del(k){ try{localStorage.removeItem("onea:"+k);}catch(e){} }
 };
 let lang = store.get("lang", (navigator.language||"").toLowerCase().startsWith("zh") ? "zh" : "en");
+let balance = null, balAll = false;
 let client = null, view = "today", ritualMode = new Date().getHours() < 15 ? "am" : "pm";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -366,6 +385,8 @@ async function doLogin(phone, code, silent){
   btn.disabled=false; btn.textContent=t("signin");
   if (r && r.ok) {
     client = r.client; store.set("session", {phone, code});
+    balance = store.get("balance", null);   // 先显示上次的，再刷新
+    DB.clientBalance(phone, code).then(b => { if (b && b.ok && client) { balance = b; store.set("balance", b); renderProfile(); } }).catch(()=>{});
     $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
     renderAll(); return;
   }
@@ -535,6 +556,7 @@ function renderProfile(){
     <p class="sub">${d.since?t("since",{a:fmt(d.since)}):""}${last?t("updated",{b:fmt(last)}):""}</p>
     <section><div class="facts">${facts.map(([k,v])=>`<div class="fact"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join("")}</div></section>
     <section>${memberCard(d)}</section>
+    ${balanceCard()}
     <section><div class="sec-head"><h2>${t("focus")}</h2><span class="eyebrow">Focus</span></div><div class="chips">${chips(d.concerns,"concerns","")}</div></section>
     <section><div class="sec-head"><h2>${t("avoid")}</h2><span class="eyebrow">Avoid</span></div><div class="chips">${chips(d.avoid,"avoid","avoid")}</div></section>
     ${ms.length?`<section><div class="sec-head"><h2>${t("analysis")}</h2><span class="eyebrow">Analysis</span></div>
@@ -544,6 +566,29 @@ function renderProfile(){
       <div class="card">${hist.length?`<ul class="history">${hist.map(h=>`<li><div><div class="n">${esc(L(h.name))}</div>${L(h.detail)?`<small>${esc(L(h.detail))}</small>`:""}</div><span class="d">${h.date?fmtShort(h.date):""}</span></li>`).join("")}</ul>`:`<div class="empty">${t("none")}</div>`}</div></section>
     <div class="foot">${t("footProfile")}</div>`;
 }
+
+function balanceCard(){
+  const b = balance;
+  if (!b || !b.ok || !(b.tx||[]).length) return "";   // 没储值过的客人不显示
+  const m = c => { const v=Math.abs(c)/100; return (c<0?"−":"") + "$" + (Number.isInteger(v)?v:v.toFixed(2)); };
+  const sg = c => (c>0?"+":"") + m(c);
+  const rows = balAll ? b.tx : b.tx.slice(0,5);
+  const terms = (CFG.balanceTerms||[]).map(x=>`<li>${esc(L(x))}</li>`).join("");
+  return `<section><div class="card bcard">
+    <div class="bhead"><h2>${t("balTitle")}</h2><span class="eyebrow">Balance</span></div>
+    <div class="btotal">${m(b.paid + b.bonus)}</div>
+    <div class="bsplit">${t("balSplit",{p:m(b.paid), b:m(b.bonus)})}</div>
+    <div class="bnote">${t("balNote")}</div>
+    <ul class="btx">${rows.map(x=>{
+      const name = (lang==="en" ? x.label_en || x.label_zh : x.label_zh || x.label_en) || T[lang].balTypes[x.type] || "";
+      const day = String(x.at||"").slice(0,10);
+      return `<li><div>${esc(name)}<small>${day?fmt(day):""}${x.type==="redeem"&&name!==T[lang].balTypes.redeem?` · ${T[lang].balTypes.redeem}`:""}</small></div><span class="a">${sg((x.paid||0)+(x.bonus||0))}</span></li>`;
+    }).join("")}</ul>
+    ${!balAll && b.tx.length>5 ? `<button class="btn ghost" style="width:100%;margin-top:10px" id="bal-more">${t("balMore",{n:b.tx.length})}</button>` : ""}
+    ${terms?`<details><summary>${t("balTerms")} →</summary><ol class="bterms">${terms}</ol></details>`:""}
+  </div></section>`;
+}
+document.addEventListener("click", e => { if (e.target.id === "bal-more") { balAll = true; renderProfile(); } });
 
 function memberCard(d){
   const m = membership(d, ymd(today));
@@ -580,7 +625,7 @@ function renderStudio(){
       <div class="card howto">${t("installText")}</div></section>
     <button class="btn ghost logout" id="logout">${t("logout")}</button>
     <div class="foot">Inspired by global skincare traditions.<br>Thoughtfully refined for your skin.</div>`;
-  $("#logout").onclick = () => { store.del("session"); store.del("cache"); client=null; $("#in-code").value=""; applyStatic(); showLogin(); };
+  $("#logout").onclick = () => { store.del("session"); store.del("cache"); store.del("balance"); client=null; balance=null; balAll=false; $("#in-code").value=""; applyStatic(); showLogin(); };
 }
 
 /* ================= NAV ================= */

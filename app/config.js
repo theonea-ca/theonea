@@ -36,5 +36,26 @@ window.ONEA_CONFIG = {
   memberPerks: [
     { zh: "每个换季一次 Shelf Edit 护肤柜整理", en: "A seasonal Shelf Edit of your skincare" },
     { zh: "优先预约热门时段", en: "Priority booking for popular times" }
+  ],
+
+  // ---------- 储值 Prepaid balance ----------
+  // 充值档位（单位：加元）。改这里即可，不用改代码
+  topupTiers: [
+    { paid: 500, bonus: 20 },
+    { paid: 1000, bonus: 50 }
+  ],
+  // 储值条款（客人端显示，中英双语）
+  balanceTerms: [
+    { zh: "储值为自愿预付，可用于 The ONEA 所有护理及加选项目。", en: "Prepaying is optional. Your balance can be used for any treatment or add-on at The ONEA." },
+    { zh: "余额长期有效，不设有效期，也不收取任何手续费或管理费。", en: "Your balance never expires, and there are no service or maintenance fees." },
+    { zh: "余额分为“储值金额”（您支付的金额）和“赠送额度”（充值时赠送）。付款时优先使用赠送额度。", en: "Your balance has two parts: Prepaid (the amount you paid) and Bonus (credit added when you top up). Bonus is used first when you pay." },
+    { zh: "赠送额度不可兑换现金。", en: "Bonus credit has no cash value." },
+    { zh: "未使用的储值金额不退还。", en: "Unused Prepaid amounts are non-refundable." },
+    { zh: "使用余额付款时，仍可使用当次适用的一项优惠。充值赠送不与其他充值活动叠加。", en: "You may still use one eligible promotion per visit when paying with your balance. Top-up bonuses cannot be combined with other top-up offers." },
+    { zh: "余额可转给家人或朋友使用，请联系我们办理。", en: "Your balance can be transferred to a family member or friend. Please contact us to arrange this." },
+    { zh: "预约定金按定金政策单独处理，与余额分开。", en: "Booking deposits follow our deposit policy and are separate from your balance." },
+    { zh: "您可以随时在 App 中查看余额和每一笔记录。", en: "You can check your balance and every transaction in the app at any time." },
+    { zh: "如 The ONEA 停止营业，我们会提前通知并退还所有未使用的储值金额。", en: "If The ONEA closes, we will give advance notice and refund all unused Prepaid amounts." },
+    { zh: "条款如有更新，不影响您已有的余额。", en: "Any future changes to these terms will not affect your existing balance." }
   ]
 };
