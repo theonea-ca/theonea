@@ -219,6 +219,22 @@ nav button.on{color:var(--ink)}
 .field select:focus,.field textarea:focus{border-color:var(--ink)}
 .field .req{color:#A0563F}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rcard .rc-note{font-family:var(--serif-zh);font-size:14px;line-height:1.8;margin:8px 0 4px}
+.rc-g{margin-top:16px}
+.rc-h{font-size:11.5px;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+.rc-steps{list-style:none;counter-reset:s}
+.rc-steps li{counter-increment:s;position:relative;padding:8px 0 8px 30px;border-bottom:1px solid var(--line)}
+.rc-steps li:last-child{border-bottom:0}
+.rc-steps li::before{content:counter(s,decimal-leading-zero);position:absolute;left:0;top:9px;font-family:var(--serif-en);font-size:13px;color:var(--muted)}
+.rc-steps .rn,.rc-paused .rn{font-size:14px}
+.rc-steps small,.rc-paused small{display:block;font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:2px}
+.rc-paused{list-style:none}.rc-paused li{padding:7px 0;border-bottom:1px solid var(--line)}.rc-paused li:last-child{border-bottom:0}
+.rc-paused .vpill{margin-top:0;margin-right:4px}
+.rc-rhythm{margin-left:18px;font-size:13.5px;line-height:1.9}
+.rcard .rc-body{max-height:260px;overflow:hidden;position:relative}
+.rcard .rc-body::after{content:"";position:absolute;left:0;right:0;bottom:0;height:60px;background:linear-gradient(transparent,var(--card))}
+.rcard.open .rc-body{max-height:none}.rcard.open .rc-body::after{display:none}
+.rc-more{margin-top:8px}
 .shelf-sum{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px}
 .shelf-sum .n{font-size:13px;color:var(--muted);line-height:1.6}
 .shelf-sum .n b{color:var(--ink);font-weight:500;font-family:var(--serif-en);font-size:20px;margin-right:2px}
@@ -354,6 +370,7 @@ const T = {
     delAsk:"确定从护肤柜删除「{n}」吗？用完或扔掉了都可以删除。",
     sSaved:"已放进护肤柜", sUpdated:"已更新", sDeleted:"已删除",
     eNameReq:"请填写产品名称", ePhoto:"照片太大，请换一张再试", eTooMany:"护肤柜最多放 20 件", eSave:"没有保存成功，请稍后再试",
+    rcTitle:"我的 Routine Card", rcAm:"早 AM", rcPm:"晚 PM", rcWeekly:"每周 Weekly", rcPaused:"暂停 / 停用", rcRhythm:"护理节奏 Treatment Rhythm", rcUpdated:"护理师更新于 {a}", rcSeason:"本季", rcShow:"展开全部", rcHide:"收起",
     eNotReady:"护肤柜还在准备中，请稍后再来看看。", eLoad:"网络不稳定，护肤柜暂时打不开。", opened:"开封 {a}"
   },
   en: {
@@ -407,6 +424,7 @@ const T = {
     delAsk:"Remove “{n}” from your shelf? You can remove products you've finished or thrown away.",
     sSaved:"Added to your shelf", sUpdated:"Updated", sDeleted:"Removed",
     eNameReq:"Please enter the product name", ePhoto:"That photo is too large — please try another", eTooMany:"Your shelf can hold up to 20 products", eSave:"Couldn't save — please try again",
+    rcTitle:"My Routine Card", rcAm:"AM", rcPm:"PM", rcWeekly:"Weekly", rcPaused:"Paused / stopped", rcRhythm:"Treatment Rhythm", rcUpdated:"Updated by your therapist {a}", rcSeason:"This season", rcShow:"Show all", rcHide:"Show less",
     eNotReady:"My Shelf is still being set up. Please check back soon.", eLoad:"Connection problem — your shelf can't be opened right now.", opened:"Opened {a}"
   }
 };
@@ -453,7 +471,7 @@ async function doLogin(phone, code, silent){
     client = r.client; store.set("session", {phone, code});
     balance = store.get("balance", null);   // 先显示上次的，再刷新
     DB.clientBalance(phone, code).then(b => { if (b && b.ok && client) { balance = b; store.set("balance", b); renderProfile(); } }).catch(()=>{});
-    shelf = store.get("shelf", null); shelfErr = ""; shelfEdit = null;
+    shelf = store.get("shelf", null); routine = store.get("routine", null); shelfErr = ""; shelfEdit = null;
     $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
     renderAll(); loadShelf(); return;
   }
@@ -677,12 +695,14 @@ function memberCard(d){
 }
 
 /* ================= 护肤柜 MY SHELF ================= */
-let shelf = null, shelfErr = "", shelfEdit = null, shelfBusy = false;
+let shelf = null, shelfErr = "", shelfEdit = null, shelfBusy = false, routine = null, rcOpen = false;
 const SH = (group, k) => k && SHELF[group][k] ? L(SHELF[group][k]) : "";
 const creds = () => store.get("session", {}) || {};
 async function loadShelf(){
-  const s = creds(), r = await DB.shelfList(s.phone, s.code);
+  const s = creds();
+  const [r, rt] = await Promise.all([DB.shelfList(s.phone, s.code), DB.routineGet(s.phone, s.code).catch(() => null)]);
   if (!client) return;
+  if (rt && rt.ok) { routine = rt.card ? { ...rt.card, published_at: rt.published_at } : null; store.set("routine", routine); }
   if (r && r.ok) { shelf = { limit: r.limit || SHELF.limit, items: r.items || [] }; shelfErr = ""; store.set("shelf", shelf); }
   else shelfErr = r && r.error === "not_ready" ? "eNotReady" : "eLoad";
   if (!shelfEdit) renderShelf();
@@ -702,6 +722,23 @@ function shelfItem(it){
       <div>${vp}${wait}</div>
       ${advice?`<div class="advice"><small>${t("adviceBy")}</small>${esc(advice)}</div>`:""}
     </div></div>`;
+}
+function routineCard(){
+  const c = routine; if (!c || !((c.am||[]).length || (c.pm||[]).length)) return "";
+  const tx = x => esc(lang==="en" ? (x.en || x.zh) : (x.zh || x.en));
+  const steps = (arr) => `<ol class="rc-steps">${arr.map(x=>`<li><div class="rn">${esc(x.name)}</div>${(x.zh||x.en)?`<small>${tx(x)}</small>`:""}</li>`).join("")}</ol>`;
+  const grp = (k, label) => (c[k]||[]).length ? `<div class="rc-g"><div class="rc-h">${t(label)}</div>${steps(c[k])}</div>` : "";
+  const paused = (c.paused||[]).length ? `<div class="rc-g"><div class="rc-h">${t("rcPaused")}</div><ul class="rc-paused">${c.paused.map(x=>`<li><span class="vpill ${esc(x.verdict)}">${SH("verdict", x.verdict)}</span> <span class="rn">${esc(x.name)}</span>${(x.zh||x.en)?`<small>${tx(x)}</small>`:""}</li>`).join("")}</ul></div>` : "";
+  const rhythm = (c.rhythm||[]).length ? `<div class="rc-g"><div class="rc-h">${t("rcRhythm")}</div><ul class="rc-rhythm">${c.rhythm.map(x=>`<li>${tx(x)}</li>`).join("")}</ul></div>` : "";
+  const note = c.note && (c.note.zh || c.note.en) ? `<p class="rc-note">${tx(c.note)}</p>` : "";
+  const day = String(c.published_at||"").slice(0,10);
+  return `<section><div class="card rcard ${rcOpen?"open":""}">
+    <div class="sec-head" style="margin-bottom:4px"><h2>${t("rcTitle")}</h2><span class="eyebrow">${esc(c.season ? (lang==="en" ? c.season.en : c.season.zh) : t("rcSeason"))}</span></div>
+    ${note}
+    <div class="rc-body">${grp("am","rcAm")}${grp("pm","rcPm")}${grp("weekly","rcWeekly")}${paused}${rhythm}</div>
+    <button class="linkbtn rc-more" id="rc-more">${t(rcOpen?"rcHide":"rcShow")}</button>
+    ${day?`<p class="sub" style="font-size:11.5px;margin-top:10px">${t("rcUpdated",{a:fmt(day)})}</p>`:""}
+  </div></section>`;
 }
 function shelfEditCard(){
   const m = membership(client.data, ymd(today)), mem = m.status === "member";
@@ -729,7 +766,8 @@ function renderShelf(){
     const grp = (k, arr) => arr.length ? `<div class="sgroup">${t(k)} · ${arr.length}</div>${arr.map(shelfItem).join("")}` : "";
     body += `<section style="margin-top:6px">${grp("grpAttention", items.filter(x=>["stop","pause","duplicate"].includes(x.verdict)))}${grp("grpWaiting", items.filter(x=>!x.verdict))}${grp("grpKeep", items.filter(x=>x.verdict==="keep"))}</section>`;
   }
-  box.innerHTML = head + body + shelfEditCard() + `<div class="foot">${t("footProfile")}</div>`;
+  box.innerHTML = head + routineCard() + body + shelfEditCard() + `<div class="foot">${t("footProfile")}</div>`;
+  const more = $("#rc-more"); if (more) more.onclick = () => { rcOpen = !rcOpen; renderShelf(); };
   $("#shelf-add").onclick = () => { shelfEdit = { name:"", brand:"", category:"", usage:"", opened:"", note:"", front:null, ingredients:null, changed:{} }; renderShelf(); window.scrollTo({top:0}); };
   box.querySelectorAll(".sitem[data-sid]").forEach(el => el.onclick = () => {
     const it = items.find(x => String(x.id) === el.dataset.sid); if (!it) return;
@@ -837,7 +875,7 @@ function renderStudio(){
       <div class="card howto">${t("installText")}</div></section>
     <button class="btn ghost logout" id="logout">${t("logout")}</button>
     <div class="foot">Inspired by global skincare traditions.<br>Thoughtfully refined for your skin.</div>`;
-  $("#logout").onclick = () => { store.del("session"); store.del("cache"); store.del("balance"); store.del("shelf"); client=null; balance=null; balAll=false; shelf=null; shelfEdit=null; $("#in-code").value=""; applyStatic(); showLogin(); };
+  $("#logout").onclick = () => { store.del("session"); store.del("cache"); store.del("balance"); store.del("shelf"); store.del("routine"); routine=null; client=null; balance=null; balAll=false; shelf=null; shelfEdit=null; $("#in-code").value=""; applyStatic(); showLogin(); };
 }
 
 /* ================= NAV ================= */

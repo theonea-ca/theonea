@@ -355,6 +355,7 @@ function openEdit(c, pre){
   loadComfort(cur.id).then(()=>{ if (pre?.comfort) applyComfortPrefill(pre.comfort); });
   loadBalance(cur.id, pre?.balance);
   loadShelfAdmin(cur.id);
+  loadRoutine(cur.id);
 }
 
 const biField = (path, obj, {area=false, ph=["中文","English（可选）"]}={}) => {
@@ -443,6 +444,10 @@ function renderEditor(){
     <div class="card" id="shelf-box"></div>
   </div>
 
+  <div class="sec"><div class="sec-head"><h2>Routine Card</h2><span class="eyebrow">Routine Card</span></div>
+    <div class="card" id="routine-box"></div>
+  </div>
+
   <div class="sec"><div class="sec-head"><h2>顾客偏好档案</h2><span class="lock">🔒 仅你可见 · 客人端不显示</span></div>
     <div class="card private" id="comfort-box"></div>
   </div>
@@ -497,6 +502,7 @@ function renderEditor(){
   renderComfort();
   renderBalance();
   renderShelfAdmin();
+  renderRoutine();
 }
 
 /* ========== 顾客偏好档案（仅后台） ========== */
@@ -558,6 +564,8 @@ $("#editor").addEventListener("change", onComfortField);
 let shRows = [], shState = "ready", shOpen = null, shPhotos = {}, shDraft = {};
 const SHV = k => SHELF.verdict[k] ? `${SHELF.verdict[k].zh} · ${SHELF.verdict[k].en}` : "";
 const SHL = (g, k) => SHELF[g][k] ? SHELF[g][k].zh : "";
+// 草稿和已发布版本不一样 = 还没发布
+const shUnpub = r => !!r.verdict && (r.verdict !== r.pub_verdict || (r.advice_zh||"") !== (r.pub_advice_zh||"") || (r.advice_en||"") !== (r.pub_advice_en||""));
 async function loadShelfAdmin(id){
   shRows = []; shOpen = null; shPhotos = {}; shDraft = {};
   if (!id) { shState = "ready"; return renderShelfAdmin(); }
@@ -576,13 +584,14 @@ function renderShelfAdmin(){
   if (shState === "loading") { box.innerHTML = `<p class="sub">读取中…</p>`; return; }
   if (shState === "error") { box.innerHTML = `<p class="sub" style="color:var(--warn)">护肤柜读取失败。如果是第一次用，请先在 Supabase 运行 shelf.sql。</p>`; return; }
   if (!shRows.length) { box.innerHTML = `<p class="sub">客人还没有上传护肤品（最多 ${SHELF.limit} 件）。</p>`; return; }
-  const pend = shRows.filter(r => r.needs_review).length;
-  box.innerHTML = `<div class="sh-sum"><span class="sub">${shRows.length} / ${SHELF.limit} 件 · ${pend ? `<b style="color:var(--warn);font-weight:500">${pend} 件待看</b>` : "都看过了"}</span>
-      <button type="button" class="btn ghost sm" data-shmsg>复制通知消息</button></div>
+  const pend = shRows.filter(r => r.needs_review).length, unpub = shRows.filter(shUnpub).length;
+  box.innerHTML = `<div class="sh-sum"><span class="sub">${shRows.length} / ${SHELF.limit} 件 · ${pend ? `<b style="color:var(--warn);font-weight:500">${pend} 件待看</b>` : "都看过了"}${unpub ? ` · ${unpub} 件标签未发布` : ""}</span>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">${unpub ? `<button type="button" class="btn solid sm" data-shpub>发布标签给客人（${unpub}）</button>` : ""}<button type="button" class="btn ghost sm" data-shmsg>复制通知消息</button></span></div>
+    <p class="sub" style="font-size:12px;margin-bottom:6px">标签和说明先存成草稿，客人看不到；点「发布标签给客人」后才会显示在客人的护肤柜里。</p>
     ${shRows.map(r => {
       const open = shOpen === r.id, d = shDraft[r.id] || { v: r.verdict || "", zh: r.advice_zh || "", en: r.advice_en || "" };
       const meta = [r.brand, SHL("category", r.category), SHL("usage", r.usage), r.opened ? "开封 " + fmtDay(r.opened) : ""].filter(Boolean).map(esc).join(" · ");
-      const st = r.needs_review ? `<span class="sh-st new">${r.reviewed_at ? "客人改过 · 待看" : "待看"}</span>` : `<span class="sh-st done">${esc(SHV(r.verdict) || "已看")}</span>`;
+      const st = r.needs_review ? `<span class="sh-st new">${r.reviewed_at ? "客人改过 · 待看" : "待看"}</span>` : `<span class="sh-st done">${esc(SHV(r.verdict) || "已看")}${shUnpub(r) ? " · 未发布" : ""}</span>`;
       const ph = shPhotos[r.id];
       const fig = (src, cap) => `<figure>${src ? `<img src="${esc(src)}" data-shzoom alt="">` : `<div class="none">没有照片</div>`}<figcaption>${cap}</figcaption></figure>`;
       return `<div class="sh-item">
@@ -600,11 +609,11 @@ function renderShelfAdmin(){
             <div class="tagz" data-l="EN"><textarea data-sha="en" data-shid="${esc(r.id)}" placeholder="e.g. Overlaps with serum A — keep one of the two">${esc(d.en)}</textarea></div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <button type="button" class="btn solid sm" data-shsave="${esc(r.id)}">保存标签</button>
+            <button type="button" class="btn solid sm" data-shsave="${esc(r.id)}">保存标签（草稿）</button>
             <button type="button" class="btn warn sm" data-shdel="${esc(r.id)}">删除这件</button>
             ${r.reviewed_at ? `<span class="sub" style="font-size:12px">上次保存 ${new Date(r.reviewed_at).toLocaleDateString("zh-CN")}</span>` : ""}
           </div>
-          <p class="sub" style="font-size:12px;margin-top:8px">保存后客人马上能看到。英文留空时，客人切到英文会显示中文。</p>
+          <p class="sub" style="font-size:12px;margin-top:8px">保存的是草稿。英文留空时，客人切到英文会显示中文。</p>
         </div>` : ""}
       </div>`;
     }).join("")}`;
@@ -618,8 +627,17 @@ $("#editor").addEventListener("input", e => {
 $("#editor").addEventListener("click", async e => {
   const z = e.target.closest("[data-shzoom]");
   if (z) { const o = document.createElement("div"); o.className = "zoom"; o.innerHTML = `<img src="${z.src}">`; o.onclick = () => o.remove(); document.body.appendChild(o); return; }
-  const t = e.target.closest("[data-shopen],[data-shv],[data-shsave],[data-shdel],[data-shmsg]"); if (!t) return;
+  const t = e.target.closest("[data-shopen],[data-shv],[data-shsave],[data-shdel],[data-shmsg],[data-shpub]"); if (!t) return;
   if (t.dataset.shmsg !== undefined) { copyText(shelfMsg()); return; }
+  if (t.dataset.shpub !== undefined) {
+    t.disabled = true;
+    try {
+      const x = await DB.shelfPublish(cur.id), now = new Date().toISOString();
+      shRows.forEach(r => { if (r.verdict && r.reviewed_at) Object.assign(r, { pub_verdict: r.verdict, pub_advice_zh: r.advice_zh, pub_advice_en: r.advice_en, published_at: now }); });
+      renderShelfAdmin(); toast(`已发布 ${x.published ?? ""} 件，客人刷新就能看到。可以点「复制通知消息」发给她`);
+    } catch(err) { t.disabled = false; toast("发布失败：" + (err.message || "网络问题")); }
+    return;
+  }
   if (t.dataset.shopen) {
     const id = t.dataset.shopen; shOpen = shOpen === id ? null : id; renderShelfAdmin();
     if (shOpen && shPhotos[id] === undefined) {
@@ -641,7 +659,7 @@ $("#editor").addEventListener("click", async e => {
       if (shelfPend[cur.id]) { shelfPend[cur.id]--; if (!shelfPend[cur.id]) delete shelfPend[cur.id]; }
       const next = shRows.find(x => x.needs_review);
       shOpen = next ? next.id : null;
-      renderShelfAdmin(); toast(next ? "已保存，打开下一件待看的" : "已保存，客人端刷新即可看到");
+      renderShelfAdmin(); toast(next ? "草稿已保存，打开下一件待看的" : "草稿已保存。都看完后点「发布标签给客人」");
       if (next && shPhotos[next.id] === undefined) { try { shPhotos[next.id] = await DB.shelfPhotosAdmin(next.id); } catch(err) { shPhotos[next.id] = null; } if (shOpen === next.id) renderShelfAdmin(); }
     } catch(err) { t.disabled = false; toast("保存失败：" + (err.message || "网络问题")); }
     return;
@@ -653,6 +671,144 @@ $("#editor").addEventListener("click", async e => {
       if (r.needs_review && shelfPend[cur.id]) { shelfPend[cur.id]--; if (!shelfPend[cur.id]) delete shelfPend[cur.id]; }
       shRows = shRows.filter(x => x.id !== id); shOpen = null; renderShelfAdmin(); toast("已删除");
     } catch(err) { toast("删除失败：" + (err.message || "")); }
+  }
+});
+
+/* ========== Routine Card（草稿只有你能看；点「发布」后客人才看到） ========== */
+const { seasonOf } = window.ONEA;
+let rc = {}, rcDraft = null, rcState = "ready", rcDirty = false, rcSync = true;
+const blankCard = () => ({ season: seasonOf(), am: [], pm: [], weekly: [], paused: [], rhythm: [], note: { zh: "", en: "" } });
+const RC_GROUPS = [["am", "早 AM"], ["pm", "晚 PM"], ["weekly", "每周 Weekly"]];
+async function loadRoutine(id){
+  rc = {}; rcDraft = null; rcDirty = false;
+  if (!id) { rcState = "ready"; return renderRoutine(); }
+  rcState = "loading"; renderRoutine();
+  try { const r = await DB.routineAdmin(id); if (!cur || cur.id !== id) return; rc = r || {}; rcDraft = rc.draft ? clone(rc.draft) : null; rcState = "ready"; }
+  catch(e) { rcState = "error"; }
+  renderRoutine();
+}
+const prodName = r => { const b = (r.brand||"").trim(), n = (r.name||"").trim(); return b && !n.includes(b) ? `${b} ${n}` : n; };
+function generateCard(){
+  const keep = shRows.filter(r => r.verdict === "keep"), card = blankCard(), ord = k => { const i = SHELF.order.indexOf(k); return i < 0 ? 99 : i; };
+  keep.sort((a, b) => ord(a.category) - ord(b.category)).forEach(r => {
+    let u = r.usage;
+    if (!u || u === "not_using") u = r.category === "sunscreen" ? "am" : r.category === "retinoid" ? "pm" : ["mask","exfoliant"].includes(r.category) ? "weekly" : "both";
+    if (u === "sometimes") u = "weekly";
+    if (r.category === "sunscreen" && u !== "weekly") u = "am";
+    if (r.category === "retinoid" && u === "both") u = "pm";
+    const step = { name: prodName(r), zh: r.advice_zh || "", en: r.advice_en || "" };
+    if (u === "both") { card.am.push({ ...step }); card.pm.push({ ...step }); } else card[u].push(step);
+  });
+  shRows.filter(r => ["pause","duplicate","stop"].includes(r.verdict)).forEach(r => card.paused.push({ name: prodName(r), verdict: r.verdict, zh: r.advice_zh || "", en: r.advice_en || "" }));
+  if (rcDraft) { card.rhythm = rcDraft.rhythm || []; card.note = rcDraft.note || card.note; }
+  return card;
+}
+function rcState2(){
+  if (!rc.published_at) return `<span class="sh-st new">未发布</span>`;
+  const changed = JSON.stringify(rc.published) !== JSON.stringify(rcDraft);
+  return `<span class="sh-st ${changed ? "new" : "done"}">${changed ? "有改动未发布" : "已发布"} · ${new Date(rc.published_at).toLocaleDateString("zh-CN")}</span>`;
+}
+function renderRoutine(){
+  const box = $("#routine-box"); if (!box) return;
+  if (!cur?.id) { box.innerHTML = `<p class="sub">保存档案后才能做 Routine Card。</p>`; return; }
+  if (rcState === "loading") { box.innerHTML = `<p class="sub">读取中…</p>`; return; }
+  if (rcState === "error") { box.innerHTML = `<p class="sub" style="color:var(--warn)">Routine Card 读取失败。如果是第一次用，请先在 Supabase 运行 routine.sql。</p>`; return; }
+  if (!rcDraft) {
+    const keep = shRows.filter(r => r.verdict === "keep").length;
+    box.innerHTML = `<p class="sub" style="margin-bottom:12px">${keep ? `可以根据护肤柜里标为「保留」的 ${keep} 件自动生成早晚步骤，再手动修改。` : "护肤柜里还没有标为「保留」的产品。可以先给产品打标签，或者从空白开始手写。"}</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn solid sm" data-rc="gen">从护肤柜自动生成</button><button type="button" class="btn ghost sm" data-rc="blank">从空白开始</button></div>`;
+    return;
+  }
+  const d = rcDraft;
+  const stepRow = (g, it, i, paused) => `<div class="item">
+    <div class="item-head"><span class="num">${String(i+1).padStart(2,"0")}</span>
+      <span><button type="button" class="icon" data-rc="up" data-g="${g}" data-i="${i}" title="上移">↑</button><button type="button" class="icon" data-rc="down" data-g="${g}" data-i="${i}" title="下移">↓</button><button type="button" class="icon" data-rc="del" data-g="${g}" data-i="${i}" title="删除">✕</button></span></div>
+    <div class="${paused ? "grid2" : ""}"><div class="field"><label class="l">产品 / 步骤</label><input data-rcp="${g}.${i}.name" value="${esc(it.name)}" placeholder="例：修丽可 B5 精华"></div>
+    ${paused ? `<div class="field"><label class="l">标签</label><select data-rcp="${g}.${i}.verdict">${["pause","duplicate","stop"].map(k=>`<option value="${k}" ${it.verdict===k?"selected":""}>${SHV(k)}</option>`).join("")}</select></div>` : ""}</div>
+    <label class="l">说明（客人可见）</label>
+    <div class="bi"><div class="tagz" data-l="中"><input data-rcp="${g}.${i}.zh" value="${esc(it.zh)}" placeholder="例：2–3 滴，按压吸收"></div><div class="tagz" data-l="EN"><input data-rcp="${g}.${i}.en" value="${esc(it.en)}" placeholder="e.g. 2–3 drops, press in"></div></div>
+  </div>`;
+  const group = (g, label, paused) => `<div class="tabs" style="margin-top:18px"><span class="eyebrow" style="align-self:center">${label}</span></div>
+    ${(d[g]||[]).map((it,i)=>stepRow(g,it,i,paused)).join("")}<button type="button" class="btn ghost sm" data-rc="add" data-g="${g}">＋ 添加${paused?"产品":"步骤"}</button>`;
+  const presetOn = p => (d.rhythm||[]).some(x => x.zh === p.zh);
+  const customs = (d.rhythm||[]).map((x,i)=>({x,i})).filter(({x}) => !SHELF.rhythm.some(p => p.zh === x.zh));
+  box.innerHTML = `
+    <div class="sh-sum"><span class="sub">${esc(d.season?.zh || "")} · ${esc(d.season?.en || "")}</span>${rcState2()}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px">
+      <button type="button" class="btn ghost sm" data-rc="gen">按护肤柜重新生成</button>
+      <button type="button" class="btn ghost sm" data-rc="season">改成本季（${esc(seasonOf().zh)}）</button>
+    </div>
+    ${RC_GROUPS.map(([g,l]) => group(g, l)).join("")}
+    ${group("paused", "暂停 / 停用 · Paused", true)}
+    <div class="tabs" style="margin-top:22px"><span class="eyebrow" style="align-self:center">护理节奏 Treatment Rhythm</span></div>
+    <div class="chips">${SHELF.rhythm.map((p,i)=>`<button type="button" class="chip ${presetOn(p)?"on":""}" data-rc="rhythm" data-i="${i}">${esc(p.zh)}</button>`).join("")}
+      ${customs.map(({x,i})=>`<button type="button" class="chip custom" data-rc="rmrhythm" data-i="${i}">${esc(x.zh||x.en)}${x.en&&x.zh?" · "+esc(x.en):""}<span class="x">×</span></button>`).join("")}</div>
+    <div class="addrow"><input id="rc-rz" placeholder="自定义（中文）"><input id="rc-re" placeholder="English"><button type="button" class="btn ghost sm" data-rc="addrhythm">＋ 添加</button></div>
+    <div style="margin-top:20px"><label class="l">给客人的一段话（可选）</label>
+      <div class="bi"><div class="tagz" data-l="中"><textarea data-rcp="note.zh" placeholder="例：这个季度先把屏障稳住，产品少一点没关系。">${esc(d.note?.zh)}</textarea></div><div class="tagz" data-l="EN"><textarea data-rcp="note.en" placeholder="e.g. This season is about a steady barrier — fewer products is fine.">${esc(d.note?.en)}</textarea></div></div></div>
+    <label class="check" style="margin-top:14px"><input type="checkbox" id="rc-sync" ${rcSync?"checked":""}>发布时把早晚步骤同步到客人的「今日仪式」</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center">
+      <button type="button" class="btn ghost sm" data-rc="save">保存草稿</button>
+      <button type="button" class="btn solid sm" data-rc="publish">发布给客人</button>
+      ${rc.published_at ? `<button type="button" class="btn ghost sm" data-rc="msg">复制通知消息</button>` : ""}
+      ${rcDirty ? `<span class="sub" style="color:var(--warn);font-size:12px">有未保存的改动</span>` : ""}
+    </div>
+    <p class="sub" style="font-size:12px;margin-top:8px">英文留空时，客人切到英文会显示中文。草稿只有你能看到。</p>`;
+}
+function routineMsg(){
+  const n = cur.name || "", url = CFG.appUrl || "";
+  return `${n} 您好，您这个季度的 Routine Card 已经放进 THE ONEA App 了：早晚护肤步骤、每个产品的说明和本季的护理节奏，都在「护肤柜」页最上面：${url}\n\nHi ${n}, your Routine Card for this season is now in the THE ONEA app — your morning and evening steps, a note on each product and your Treatment Rhythm, at the top of the My Shelf page: ${url}`;
+}
+function rcTouch(){ rcDirty = true; }
+$("#editor").addEventListener("input", e => {
+  const p = e.target.dataset.rcp; if (!p || !rcDraft) return;
+  setPath(rcDraft, p, e.target.value); rcTouch();
+});
+$("#editor").addEventListener("change", e => {
+  if (e.target.id === "rc-sync") { rcSync = e.target.checked; return; }
+  const p = e.target.dataset.rcp; if (!p || !rcDraft) return;
+  setPath(rcDraft, p, e.target.value); rcTouch();
+});
+$("#editor").addEventListener("click", async e => {
+  const b = e.target.closest("[data-rc]"); if (!b) return;
+  const a = b.dataset.rc, g = b.dataset.g, i = +b.dataset.i;
+  const rer = () => { const y = scrollY; renderRoutine(); scrollTo(0, y); };
+  if (a === "blank") { rcDraft = blankCard(); rcTouch(); return rer(); }
+  if (a === "gen") {
+    if (rcDraft && ((rcDraft.am||[]).length || (rcDraft.pm||[]).length) && !(await ask("重新生成？", "会按护肤柜现在的标签重新排早晚步骤和暂停清单，你手动改过的步骤会被替换（护理节奏和留言保留）。", "重新生成"))) return;
+    rcDraft = generateCard(); rcTouch(); rer();
+    if (!shRows.some(r => r.verdict === "keep")) toast("护肤柜里还没有标为「保留」的产品，可以手动添加步骤");
+    return;
+  }
+  if (!rcDraft) return;
+  const arr = rcDraft[g];
+  if (a === "season") { rcDraft.season = seasonOf(); rcTouch(); return rer(); }
+  if (a === "add") { arr.push(g === "paused" ? { name: "", verdict: "pause", zh: "", en: "" } : { name: "", zh: "", en: "" }); rcTouch(); return rer(); }
+  if (a === "del") { arr.splice(i, 1); rcTouch(); return rer(); }
+  if (a === "up" && i > 0) { [arr[i-1], arr[i]] = [arr[i], arr[i-1]]; rcTouch(); return rer(); }
+  if (a === "down" && i < arr.length - 1) { [arr[i+1], arr[i]] = [arr[i], arr[i+1]]; rcTouch(); return rer(); }
+  if (a === "rhythm") { const p = SHELF.rhythm[i], k = rcDraft.rhythm.findIndex(x => x.zh === p.zh); k > -1 ? rcDraft.rhythm.splice(k, 1) : rcDraft.rhythm.push({ ...p }); rcTouch(); return rer(); }
+  if (a === "rmrhythm") { rcDraft.rhythm.splice(i, 1); rcTouch(); return rer(); }
+  if (a === "addrhythm") { const zh = $("#rc-rz").value.trim(), en = $("#rc-re").value.trim(); if (!zh && !en) return; rcDraft.rhythm.push({ zh, en }); rcTouch(); return rer(); }
+  if (a === "msg") { copyText(routineMsg()); return; }
+  if (a === "save" || a === "publish") {
+    // 去掉空行
+    ["am","pm","weekly","paused"].forEach(k => rcDraft[k] = (rcDraft[k]||[]).filter(x => (x.name||"").trim()));
+    const pub = a === "publish";
+    if (pub && !rcDraft.am.length && !rcDraft.pm.length) return toast("早晚步骤至少要有一项");
+    if (pub && !(await ask("发布 Routine Card？", `${cur.name} 刷新 app 后就能在「护肤柜」页看到这份 Routine Card。`, "发布"))) return;
+    b.disabled = true;
+    try {
+      const r = await DB.routineSave(cur.id, clone(rcDraft), pub);
+      rc = { ...rc, ...r, draft: clone(rcDraft) }; rcDirty = false;
+      if (pub && rcSync) {
+        const toStep = x => ({ t: { zh: x.name, en: x.name }, s: { zh: x.zh || "", en: x.en || "" } });
+        cur.data.ritual = { am: rcDraft.am.map(toStep), pm: rcDraft.pm.map(toStep) };
+        renderEditor(); setDirty(true);
+        toast("已发布。早晚步骤已同步到「今日仪式」，正在保存档案…");
+        $("#save").click();
+      } else { renderRoutine(); toast(pub ? "已发布，可以点「复制通知消息」发给她" : "草稿已保存"); }
+    } catch(err) { b.disabled = false; toast((pub ? "发布" : "保存") + "失败：" + (err.message || "网络问题")); }
   }
 });
 
@@ -1177,7 +1333,7 @@ $("#del").onclick = async () => {
   catch(err){ toast("删除失败：" + (err.message||"")); }
 };
 $("#back").onclick = async () => {
-  if (dirty && !(await ask("还没保存", "离开后这次的修改会丢失。", "不保存，离开"))) return;
+  if ((dirty || rcDirty) && !(await ask("还没保存", rcDirty && !dirty ? "Routine Card 草稿有改动还没保存，离开后会丢失。" : "离开后这次的修改会丢失。", "不保存，离开"))) return;
   setDirty(false); openList();
 };
 

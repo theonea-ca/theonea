@@ -76,8 +76,29 @@
       duplicate: { zh: "重复", en: "Duplicate" },
       stop: { zh: "停用", en: "Stop" }
     },
-    limit: 20
+    limit: 20,
+    // Routine Card 自动生成时的步骤顺序
+    order: ["cleanser", "toner", "exfoliant", "serum", "retinoid", "eye", "moisturizer", "oil", "sunscreen", "mask", "tool", "other"],
+    // 护理节奏 Treatment Rhythm 预设（双语）
+    rhythm: [
+      { zh: "每 4–6 周一次深层清洁", en: "A deep cleanse every 4–6 weeks" },
+      { zh: "本季建议 1 次色修护理", en: "One tone-correcting treatment this season" },
+      { zh: "每月一次补水护理", en: "A hydrating facial once a month" },
+      { zh: "本季建议 2–3 次屏障修护护理", en: "2–3 barrier-repair treatments this season" },
+      { zh: "屏障修护期：暂停所有酸类和 A 醇", en: "While repairing the barrier: pause all acids and retinoids" },
+      { zh: "每天防晒，阴天和冬天也要", en: "Sunscreen every day — cloudy days and winter too" },
+      { zh: "下个季度再做一次 Shelf Edit", en: "Another Shelf Edit next season" }
+    ]
   };
+  // 自然季：12–2 冬，3–5 春，6–8 夏，9–11 秋
+  function seasonOf(iso) {
+    const d = iso ? new Date(iso + "T12:00:00") : new Date(), m = d.getMonth() + 1;
+    const k = m === 12 || m <= 2 ? "winter" : m <= 5 ? "spring" : m <= 8 ? "summer" : "autumn";
+    const y0 = k === "winter" && m !== 12 ? d.getFullYear() - 1 : d.getFullYear();   // 冬季跨年：12 月所在年份开始
+    const y = k === "winter" ? `${y0}–${String(y0 + 1).slice(2)}` : String(y0);
+    const n = { winter: ["冬季", "Winter"], spring: ["春季", "Spring"], summer: ["夏季", "Summer"], autumn: ["秋季", "Autumn"] }[k];
+    return { key: `${y0}-${k}`, zh: `${y} ${n[0]}`, en: `${n[1]} ${y}` };
+  }
 
   const METRICS = [
     { key: "hydration", zh: "水分", en: "Hydration" },
@@ -415,7 +436,7 @@
     },
     /* ---------- 护肤柜：客人自己写（验证手机号+访问码），你在后台打标签 ---------- */
     async shelfList(phone, code) {
-      if (!LIVE) { const c = demoFind(phone, code); return c ? { ok: true, limit: SHELF.limit, items: shelfDemo.rows(c.id) } : { ok: false, error: "nomatch" }; }
+      if (!LIVE) { const c = demoFind(phone, code); return c ? { ok: true, limit: SHELF.limit, items: shelfDemo.clientRows(c.id) } : { ok: false, error: "nomatch" }; }
       return shelfRpc("shelf_list", { p_phone: normPhone(phone), p_code: String(code || "").trim() });
     },
     async shelfPhotos(phone, code, id) {
@@ -439,7 +460,7 @@
       if (!clientId) return [];
       if (!LIVE) return shelfDemo.rows(clientId);
       const db = await sb();
-      const { data, error } = await db.from("shelf_items").select("id,client_id,name,brand,category,usage,opened,note,thumb,verdict,advice_zh,advice_en,created_at,updated_at,reviewed_at,needs_review").eq("client_id", clientId).order("created_at", { ascending: true });
+      const { data, error } = await db.from("shelf_items").select("id,client_id,name,brand,category,usage,opened,note,thumb,verdict,advice_zh,advice_en,created_at,updated_at,reviewed_at,needs_review,pub_verdict,pub_advice_zh,pub_advice_en,published_at").eq("client_id", clientId).order("created_at", { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -458,6 +479,36 @@
       })();
       return rows.reduce((m, r) => (m[r.client_id] = (m[r.client_id] || 0) + 1, m), {});
     },
+    async shelfPublish(clientId) {
+      if (!LIVE) return shelfDemo.publish(clientId);
+      const db = await sb();
+      const { data, error } = await db.rpc("shelf_publish", { p_client: clientId });
+      if (error) throw new Error(String(error.message || "").includes("function") ? "请先在 Supabase 运行 routine.sql" : error.message);
+      return data;
+    },
+
+    /* ---------- Routine Card：草稿只有你能看；客人只读已发布的版本 ---------- */
+    async routineGet(phone, code) {
+      if (!LIVE) { const c = demoFind(phone, code); if (!c) return { ok: false, error: "nomatch" }; const r = routineDemo.get(c.id); return { ok: true, card: r.published || null, published_at: r.published_at || null }; }
+      return shelfRpc("routine_get", { p_phone: normPhone(phone), p_code: String(code || "").trim() });
+    },
+    async routineAdmin(clientId) {
+      if (!LIVE) return routineDemo.get(clientId);
+      const db = await sb();
+      const { data, error } = await db.from("routine_cards").select("*").eq("client_id", clientId).maybeSingle();
+      if (error) throw error;
+      return data || {};
+    },
+    async routineSave(clientId, draft, publish) {
+      const row = { client_id: clientId, draft, updated_at: new Date().toISOString() };
+      if (publish) { row.published = draft; row.published_at = new Date().toISOString(); }
+      if (!LIVE) return routineDemo.put(clientId, row);
+      const db = await sb();
+      const { data, error } = await db.from("routine_cards").upsert(row, { onConflict: "client_id" }).select().single();
+      if (error) throw new Error(/routine_cards|schema cache/.test(String(error.message || "")) ? "请先在 Supabase 运行 routine.sql" : error.message);
+      return data;
+    },
+
     async shelfAdminDelete(id) {
       if (!LIVE) { shelfDemo.put(shelfDemo.all().filter(r => r.id !== id)); const ph = shelfDemo.photos(); delete ph[id]; shelfDemo.putPhotos(ph); return; }
       const db = await sb();
@@ -547,11 +598,21 @@
     put(rows) { try { localStorage.setItem(this.KEY, JSON.stringify(rows)); return true; } catch (e) { return false; } },
     photos() { try { return JSON.parse(localStorage.getItem(this.PKEY) || "{}"); } catch (e) { return {}; } },
     putPhotos(p) { try { localStorage.setItem(this.PKEY, JSON.stringify(p)); return true; } catch (e) { return false; } },
-    rows(cid) {
-      const ph = this.photos();
-      return this.all().filter(r => r.client_id === cid).map(r => ({ ...r, needs_review: needsReview(r),
-        verdict: r.reviewed_at ? r.verdict : null, has_front: !!ph[r.id]?.front, has_ingredients: !!ph[r.id]?.ingredients }))
+    rows(cid) {   // 后台
+      return this.all().filter(r => r.client_id === cid).map(r => ({ ...r, needs_review: needsReview(r) }))
         .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    },
+    clientRows(cid) {   // 客人端：只看已发布的
+      const ph = this.photos();
+      return this.rows(cid).map(r => ({ id: r.id, name: r.name, brand: r.brand, category: r.category, usage: r.usage, opened: r.opened, note: r.note, thumb: r.thumb,
+        has_front: !!ph[r.id]?.front, has_ingredients: !!ph[r.id]?.ingredients,
+        verdict: r.pub_verdict || null, advice_zh: r.pub_advice_zh || "", advice_en: r.pub_advice_en || "", published_at: r.published_at || null,
+        needs_review: !r.pub_verdict || r.updated_at > r.published_at }));
+    },
+    publish(cid) {
+      const all = this.all(), now = new Date(Date.now() + 2).toISOString(); let n = 0;
+      all.forEach(r => { if (r.client_id === cid && r.verdict && r.reviewed_at) { Object.assign(r, { pub_verdict: r.verdict, pub_advice_zh: r.advice_zh, pub_advice_en: r.advice_en, published_at: now }); n++; } });
+      this.put(all); return { ok: true, published: n };
     },
     save(cid, id, it) {
       const all = this.all(), now = new Date().toISOString();
@@ -576,9 +637,16 @@
     }
   };
 
+  const routineDemo = {
+    KEY: "onea:demo-routine",
+    all() { try { return JSON.parse(localStorage.getItem(this.KEY) || "{}"); } catch (e) { return {}; } },
+    get(cid) { return this.all()[cid] || {}; },
+    put(cid, row) { const a = this.all(); a[cid] = { ...(a[cid] || {}), ...row }; try { localStorage.setItem(this.KEY, JSON.stringify(a)); } catch (e) {} return a[cid]; }
+  };
+
   // persist demo writes made via saveClient
   const _save = DB.saveClient;
   DB.saveClient = async c => { const r = await _save(c); if (!LIVE) demoSave(); return r; };
 
-  window.ONEA = { CFG, LIVE, PRESETS, SHELF, METRICS, JOURNEY, DB, blankData, normPhone, bi, membership, balSum };
+  window.ONEA = { CFG, LIVE, PRESETS, SHELF, METRICS, JOURNEY, DB, blankData, normPhone, bi, membership, balSum, seasonOf };
 })();
