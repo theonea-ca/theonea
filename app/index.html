@@ -263,6 +263,17 @@ nav button.on{color:var(--ink)}
 .secard .seprice span{font-size:12.5px;color:var(--muted)}
 .sform-acts{display:flex;gap:10px;margin-top:6px}
 .sform-acts .btn{flex:1}
+/* 代金券 / 本季 Shelf Edit / 提醒 */
+.se-line{display:flex;justify-content:space-between;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:13px}
+.mcard.on .se-line{border-top-color:#46433E}
+.se-line b{font-weight:500}
+.vrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.vrow:last-of-type{border-bottom:0}
+.vrow .vamt{font-family:var(--serif-en);font-size:24px;font-weight:500;line-height:1}
+.vrow small{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+.vrow.used .vamt,.vrow.expired .vamt{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--sand)}
+.remcard{border-color:var(--sand);background:var(--sand-soft)}
+.remcard ul{margin-left:18px;font-size:13.5px;line-height:1.8}
 .hidden{display:none!important}
 </style>
 </head>
@@ -315,7 +326,7 @@ nav button.on{color:var(--ink)}
 <script src="config.js"></script>
 <script src="store.js"></script>
 <script>
-const { CFG, PRESETS, SHELF, METRICS, JOURNEY, DB, LIVE, membership } = window.ONEA;
+const { CFG, PRESETS, SHELF, METRICS, JOURNEY, DB, LIVE, membership, seasonOf } = window.ONEA;
 
 /* ================= UI TEXT ================= */
 const T = {
@@ -370,6 +381,9 @@ const T = {
     delAsk:"确定从护肤柜删除「{n}」吗？用完或扔掉了都可以删除。",
     sSaved:"已放进护肤柜", sUpdated:"已更新", sDeleted:"已删除",
     eNameReq:"请填写产品名称", ePhoto:"照片太大，请换一张再试", eTooMany:"护肤柜最多放 20 件", eSave:"没有保存成功，请稍后再试",
+    vTitle:"我的代金券", vOpen:"可用", vUsed:"已使用", vExpired:"已过期", vUntil:"有效至 {a}", vUsedOn:"{a} 已使用", vRule:"可用于任意护理（不适用于 Shelf Edit），算作当次的一项优惠，不与其他优惠叠加。",
+    seThis:"本季 Shelf Edit", seUsed:"已使用 · {a}", seBooked:"已预约 · {a}", seNotYet:"还没用", seBookLink:"预约 →",
+    remTitle:"季度提醒", remNext:"下季度（{s}）的 Shelf Edit 从 {a} 起可以预约。", remNotUsed:"本季的 Shelf Edit 还没用，{a} 前有效，不顺延。", remVoucher:"你的 ${n} 代金券 {a} 到期，到店时记得用。",
     rcTitle:"我的 Routine Card", rcAm:"早 AM", rcPm:"晚 PM", rcWeekly:"每周 Weekly", rcPaused:"暂停 / 停用", rcRhythm:"护理节奏 Treatment Rhythm", rcUpdated:"护理师更新于 {a}", rcSeason:"本季", rcShow:"展开全部", rcHide:"收起",
     eNotReady:"护肤柜还在准备中，请稍后再来看看。", eLoad:"网络不稳定，护肤柜暂时打不开。", opened:"开封 {a}"
   },
@@ -424,6 +438,9 @@ const T = {
     delAsk:"Remove “{n}” from your shelf? You can remove products you've finished or thrown away.",
     sSaved:"Added to your shelf", sUpdated:"Updated", sDeleted:"Removed",
     eNameReq:"Please enter the product name", ePhoto:"That photo is too large — please try another", eTooMany:"Your shelf can hold up to 20 products", eSave:"Couldn't save — please try again",
+    vTitle:"My credits", vOpen:"Available", vUsed:"Used", vExpired:"Expired", vUntil:"Valid until {a}", vUsedOn:"Used {a}", vRule:"Toward any treatment (not Shelf Edit). It counts as your one promotion for that visit and can't be combined with other offers.",
+    seThis:"This season's Shelf Edit", seUsed:"Used · {a}", seBooked:"Booked · {a}", seNotYet:"Not used yet", seBookLink:"Book →",
+    remTitle:"Seasonal reminder", remNext:"Your Shelf Edit for next season ({s}) can be booked from {a}.", remNotUsed:"You haven't used this season's Shelf Edit yet — it's valid until {a} and doesn't carry over.", remVoucher:"Your ${n} credit expires {a} — remember to use it at your next visit.",
     rcTitle:"My Routine Card", rcAm:"AM", rcPm:"PM", rcWeekly:"Weekly", rcPaused:"Paused / stopped", rcRhythm:"Treatment Rhythm", rcUpdated:"Updated by your therapist {a}", rcSeason:"This season", rcShow:"Show all", rcHide:"Show less",
     eNotReady:"My Shelf is still being set up. Please check back soon.", eLoad:"Connection problem — your shelf can't be opened right now.", opened:"Opened {a}"
   }
@@ -436,7 +453,7 @@ const store = {
   del(k){ try{localStorage.removeItem("onea:"+k);}catch(e){} }
 };
 let lang = store.get("lang", (navigator.language||"").toLowerCase().startsWith("zh") ? "zh" : "en");
-let balance = null, balAll = false;
+let balance = null, balAll = false, perks = null;
 let client = null, view = "today", ritualMode = new Date().getHours() < 15 ? "am" : "pm";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -472,6 +489,8 @@ async function doLogin(phone, code, silent){
     balance = store.get("balance", null);   // 先显示上次的，再刷新
     DB.clientBalance(phone, code).then(b => { if (b && b.ok && client) { balance = b; store.set("balance", b); renderProfile(); } }).catch(()=>{});
     shelf = store.get("shelf", null); routine = store.get("routine", null); shelfErr = ""; shelfEdit = null;
+    perks = store.get("perks", null);
+    DB.perksGet(phone, code).then(x => { if (x && x.ok && client) { perks = x; store.set("perks", x); renderToday(); renderProfile(); } }).catch(()=>{});
     $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
     renderAll(); loadShelf(); return;
   }
@@ -529,6 +548,7 @@ function renderToday(){
     <div class="eyebrow">${dateLine}</div>
     <h1>${greet}${(()=>{ const m=membership(d, ymd(today)); return m.status==="member" ? `<span class="mbadge">${t(m.prepaid?"prepaidBadge":"memberBadge")}</span>` : ""; })()}</h1><p class="sub">${t("todaySub")}</p>
     <section><div class="stage">${stage}</div></section>
+    ${reminderCard()}
     <section>
       <div class="sec-head"><h2>${t("ritual")}</h2>
         <div class="seg" id="seg"><button data-r="am">${t("am")}</button><button data-r="pm">${t("pm")}</button></div></div>
@@ -642,6 +662,7 @@ function renderProfile(){
     <section><div class="facts">${facts.map(([k,v])=>`<div class="fact"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join("")}</div></section>
     <section>${memberCard(d)}</section>
     ${balanceCard()}
+    ${voucherCard()}
     <section><div class="sec-head"><h2>${t("focus")}</h2><span class="eyebrow">Focus</span></div><div class="chips">${chips(d.concerns,"concerns","")}</div></section>
     <section><div class="sec-head"><h2>${t("avoid")}</h2><span class="eyebrow">Avoid</span></div><div class="chips">${chips(d.avoid,"avoid","avoid")}</div></section>
     ${ms.length?`<section><div class="sec-head"><h2>${t("analysis")}</h2><span class="eyebrow">Analysis</span></div>
@@ -675,14 +696,51 @@ function balanceCard(){
 }
 document.addEventListener("click", e => { if (e.target.id === "bal-more") { balAll = true; renderProfile(); } });
 
+/* ---------- 代金券 / 本季 Shelf Edit / 季末提醒 ---------- */
+const money0 = c => "$" + (c % 100 ? (c/100).toFixed(2) : c/100);
+const vSt = v => v.used_at ? "used" : v.expires_on < ymd(today) ? "expired" : "open";
+const bookShelfUrl = () => (CFG.bookingUrl || "https://theonea.ca/book/") + (String(CFG.bookingUrl||"").includes("?") ? "&" : "?") + "s=" + encodeURIComponent(CFG.shelfEditService || "shelf_edit");
+function thisSeasonEdit(){ const k = seasonOf(ymd(today)).key; return ((perks && perks.shelf_edits) || []).find(e => e.season_key === k) || null; }
+function shelfEditLine(){
+  const e = thisSeasonEdit();
+  const v = e ? t(e.status === "done" ? "seUsed" : "seBooked", { a: fmt(e.visit_date) }) : `${t("seNotYet")} · <a href="${esc(bookShelfUrl())}" target="_blank" rel="noopener" style="color:inherit">${t("seBookLink")}</a>`;
+  return `<div class="se-line"><span>${t("seThis")}</span><b>${v}</b></div>`;
+}
+function voucherCard(){
+  const vs = (perks && perks.vouchers) || []; if (!vs.length) return "";
+  const lab = { open: "vOpen", used: "vUsed", expired: "vExpired" };
+  return `<section><div class="sec-head"><h2>${t("vTitle")}</h2><span class="eyebrow">Credits</span></div>
+    <div class="card">${vs.map(v => { const st = vSt(v); return `<div class="vrow ${st}"><div><div class="vamt">${money0(v.amount_cents)}</div>
+      <small>${st === "used" ? t("vUsedOn", { a: fmt(String(v.used_at).slice(0,10)) }) : t("vUntil", { a: fmt(v.expires_on) })}</small></div>
+      <span class="vpill ${st === "open" ? "keep" : "wait"}">${t(lab[st])}</span></div>`; }).join("")}
+      <p class="sub" style="font-size:11.5px;margin-top:10px">${t("vRule")}</p></div></section>`;
+}
+function reminderCard(){
+  const days = Number(CFG.reminderDays) || 21, td = ymd(today), sea = seasonOf(td);
+  const left = Math.round((parse(sea.end) - parse(td)) / 864e5), items = [];
+  const isMember = membership(client.data, td).status === "member";
+  if (left <= days && isMember) {
+    const nxt = new Date(parse(sea.end)); nxt.setDate(nxt.getDate() + 1); const ns = seasonOf(ymd(nxt));
+    if (!thisSeasonEdit()) items.push(t("remNotUsed", { a: fmt(sea.end) }));
+    items.push(t("remNext", { s: lang === "en" ? ns.en : ns.zh, a: fmt(ns.start) }));
+  }
+  ((perks && perks.vouchers) || []).filter(v => vSt(v) === "open").forEach(v => {
+    const dl = Math.round((parse(v.expires_on) - parse(td)) / 864e5);
+    if (dl <= days) items.push(t("remVoucher", { n: (v.amount_cents/100), a: fmt(v.expires_on) }).replace("$$", "$"));
+  });
+  if (!items.length) return "";
+  return `<section><div class="card remcard"><div class="eyebrow" style="margin-bottom:8px">${t("remTitle")}</div><ul>${items.map(x => `<li>${x}</li>`).join("")}</ul></div></section>`;
+}
+
 function memberCard(d){
   const m = membership(d, ymd(today));
-  const perks = (CFG.memberPerks||[]).map(x=>`<li>${esc(L(x))}</li>`).join("");
+  const perkList = (CFG.memberPerks||[]).map(x=>`<li>${esc(L(x))}</li>`).join("");
   if (m.status === "member") {
     const meta = [t("visitsCount",{n:m.visits}), m.since ? t("memberSince",{a:fmt(m.since)}) : "", m.prepaid ? t("memberForever") : m.until ? t("memberUntil",{a:fmt(m.until)}) : ""].filter(Boolean).join(" · ");
     return `<div class="card mcard on"><div class="mhead"><span class="mname">${t("memberTitle")}</span><span class="eyebrow">${m.prepaid?"Prepaid":"Member"}</span></div>
       <div class="mmeta">${meta}</div>
-      ${perks?`<ul class="perks"><small>${t("memberPerks")}</small>${perks}</ul>`:""}</div>`;
+      ${shelfEditLine()}
+      ${perkList?`<ul class="perks"><small>${t("memberPerks")}</small>${perkList}</ul>`:""}</div>`;
   }
   if (m.status === "paused") {
     return `<div class="card mcard"><div class="mhead"><span class="mname">${t("memberPaused")}</span><span class="eyebrow">Membership</span></div>
@@ -691,7 +749,7 @@ function memberCard(d){
   return `<div class="card mcard"><div class="mhead"><span class="mname">${t(m.toGo===1?"memberToGoOne":"memberToGo",{n:m.toGo})}</span><span class="eyebrow">Membership</span></div>
     <div class="mdots">${Array.from({length:m.need},(_,i)=>`<span class="${i<m.visits?'d':''}"></span>`).join("")}</div>
     <div class="mmeta">${t("memberOr",{m:m.need})}</div>
-    ${perks?`<ul class="perks"><small>${t("memberPreview")}</small>${perks}</ul>`:""}</div>`;
+    ${perkList?`<ul class="perks"><small>${t("memberPreview")}</small>${perkList}</ul>`:""}</div>`;
 }
 
 /* ================= 护肤柜 MY SHELF ================= */
@@ -875,7 +933,7 @@ function renderStudio(){
       <div class="card howto">${t("installText")}</div></section>
     <button class="btn ghost logout" id="logout">${t("logout")}</button>
     <div class="foot">Inspired by global skincare traditions.<br>Thoughtfully refined for your skin.</div>`;
-  $("#logout").onclick = () => { store.del("session"); store.del("cache"); store.del("balance"); store.del("shelf"); store.del("routine"); routine=null; client=null; balance=null; balAll=false; shelf=null; shelfEdit=null; $("#in-code").value=""; applyStatic(); showLogin(); };
+  $("#logout").onclick = () => { store.del("session"); store.del("cache"); store.del("balance"); store.del("shelf"); store.del("routine"); store.del("perks"); perks=null; routine=null; client=null; balance=null; balAll=false; shelf=null; shelfEdit=null; $("#in-code").value=""; applyStatic(); showLogin(); };
 }
 
 /* ================= NAV ================= */

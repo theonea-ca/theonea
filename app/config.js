@@ -43,8 +43,17 @@ window.ONEA_CONFIG = {
   // 会员福利（客人端显示，中英双语）
   memberPerks: [
     { zh: "每季度一次 Shelf Edit 护肤柜整理，会员价 $29", en: "One Shelf Edit each season at the member price, $29" },
+    { zh: "每季度一张 $10 护理代金券（有效期三个月）", en: "A $10 treatment credit each season, valid for 3 months" },
     { zh: "优先预约热门时段", en: "Priority booking for popular times" }
   ],
+
+  // ---------- 季度代金券 Seasonal credit ----------
+  voucherAmount: 10,     // 每张金额（加元）
+  voucherMonths: 3,      // 有效期（从发券当天起算几个月）
+  // 季度结束前几天开始在 app 里提醒（下季度 Shelf Edit、代金券到期）
+  reminderDays: 21,
+  shelfEditMemberPrice: 29,
+  shelfEditPrice: 49,
 
   // ---------- 储值 Prepaid balance ----------
   // 充值档位（单位：加元）。改这里即可，不用改代码

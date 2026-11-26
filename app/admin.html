@@ -200,6 +200,7 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
   <p class="sub" id="list-count"></p>
   <div id="demo-banner" class="banner hidden">演示模式：数据只存在这个浏览器。客人端用同一个浏览器打开就能看到你录入的内容。</div>
   <div id="bkcard"></div>
+  <div id="vcard"></div>
   <div id="inbox"></div>
   <div class="search"><input id="q" placeholder="搜索名字或手机号"></div>
   <div id="clist"></div>
@@ -302,7 +303,8 @@ async function openList(){
   try { shelfPend = await DB.shelfPending(); } catch(e){ shelfPend = {}; }
   $("#demo-banner").classList.toggle("hidden", LIVE);
   $("#reset-demo").hidden = LIVE; $("#signout").hidden = !LIVE;
-  renderBkCard(); renderInbox(); renderList(); show("s-list");
+  try { allVouchers = await DB.vouchersAll(); vErr = false; } catch(e){ allVouchers = []; vErr = true; }
+  renderBkCard(); renderVCard(); renderInbox(); renderList(); show("s-list");
   const m = location.hash.match(/ref=([A-Z0-9-]+)/i);   // 邮件里的「去确认订金」按钮
   if (m) {
     history.replaceState(null, "", location.pathname);
@@ -356,6 +358,7 @@ function openEdit(c, pre){
   loadBalance(cur.id, pre?.balance);
   loadShelfAdmin(cur.id);
   loadRoutine(cur.id);
+  loadPerks(cur.id);
 }
 
 const biField = (path, obj, {area=false, ph=["中文","English（可选）"]}={}) => {
@@ -448,6 +451,10 @@ function renderEditor(){
     <div class="card" id="routine-box"></div>
   </div>
 
+  <div class="sec"><div class="sec-head"><h2>代金券 · Shelf Edit 记录</h2><span class="eyebrow">Credits &amp; Shelf Edits</span></div>
+    <div class="card" id="perks-box"></div>
+  </div>
+
   <div class="sec"><div class="sec-head"><h2>顾客偏好档案</h2><span class="lock">🔒 仅你可见 · 客人端不显示</span></div>
     <div class="card private" id="comfort-box"></div>
   </div>
@@ -503,6 +510,7 @@ function renderEditor(){
   renderBalance();
   renderShelfAdmin();
   renderRoutine();
+  renderPerks();
 }
 
 /* ========== 顾客偏好档案（仅后台） ========== */
@@ -810,6 +818,118 @@ $("#editor").addEventListener("click", async e => {
       } else { renderRoutine(); toast(pub ? "已发布，可以点「复制通知消息」发给她" : "草稿已保存"); }
     } catch(err) { b.disabled = false; toast((pub ? "发布" : "保存") + "失败：" + (err.message || "网络问题")); }
   }
+});
+
+/* ========== 季度代金券 + Shelf Edit 记录 ========== */
+const seasonFromKey = k => { const [y, s] = String(k||"").split("-"); const m = { winter: "12", spring: "03", summer: "06", autumn: "09" }[s]; return m ? seasonOf(`${y}-${m}-01`) : { zh: k, en: k }; };
+const addMonths = (iso, n) => { const d = new Date(iso + "T12:00:00"); d.setMonth(d.getMonth() + n); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const vAmount = () => Math.round((Number(CFG.voucherAmount) || 10) * 100);
+const newVoucher = cid => { const t = todayStr(); return { client_id: cid, season_key: seasonOf(t).key, amount_cents: vAmount(), issued_on: t, expires_on: addMonths(t, Number(CFG.voucherMonths) || 3) }; };
+const vStatus = v => v.used_at ? "used" : v.expires_on < todayStr() ? "expired" : "open";
+let allVouchers = [], vErr = false;
+
+function renderVCard(){
+  const box = $("#vcard"); if (!box) return;
+  const sea = seasonOf(), members = clients.filter(c => membership(c.data).status === "member");
+  if (vErr) { box.innerHTML = `<div class="card" style="margin:0 0 14px"><p class="sub" style="color:var(--warn)">代金券读取失败。如果是第一次用，请先在 Supabase 运行 perks.sql。</p></div>`; return; }
+  const got = new Set(allVouchers.filter(v => v.season_key === sea.key).map(v => v.client_id));
+  const todo = members.filter(c => !got.has(c.id)), used = allVouchers.filter(v => v.season_key === sea.key && v.used_at).length;
+  const ex = newVoucher("");
+  box.innerHTML = `<div class="card" style="margin:0 0 14px">
+    <div class="sec-head"><h2>季度代金券 <span class="sub">· ${esc(sea.zh)}</span></h2><span class="eyebrow">Seasonal credit</span></div>
+    <p class="sub" style="margin-top:6px">会员 ${members.length} 位 · 本季已发 ${got.size} 张 · 已使用 ${used} 张</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      ${todo.length ? `<button type="button" class="btn solid sm" id="v-issue">给 ${todo.length} 位会员发本季代金券（$${vAmount()/100}，有效至 ${fmtDay(ex.expires_on)}）</button>` : `<span class="sub">本季所有会员都已发券 ✓</span>`}
+      ${got.size ? `<button type="button" class="btn ghost sm" id="v-msg">复制群发消息</button>` : ""}
+    </div></div>`;
+  const ib = $("#v-issue");
+  if (ib) ib.onclick = async () => {
+    if (!(await ask("发本季代金券？", `给 ${todo.length} 位会员各发一张 $${vAmount()/100} 代金券，有效至 ${fmtDay(ex.expires_on)}。已经有本季券的会员会自动跳过。`, "发券"))) return;
+    ib.disabled = true;
+    try { const r = await DB.voucherIssue(todo.map(c => newVoucher(c.id))); allVouchers = await DB.vouchersAll(); renderVCard(); toast(`已发 ${r.length} 张。可以点「复制群发消息」通知会员`); }
+    catch(e) { ib.disabled = false; toast("发券失败：" + (e.message || "网络问题")); }
+  };
+  const mb = $("#v-msg"); if (mb) mb.onclick = () => copyText(voucherMsg(ex.expires_on));
+}
+function voucherMsg(exp, name){
+  const url = CFG.appUrl || "", n = name ? name + " " : "", amt = vAmount()/100, sea = seasonOf();
+  return `${n}您好，您的 THE ONEA ${sea.zh}会员代金券已经发放：$${amt}，可用于任意护理（不适用于 Shelf Edit），有效至 ${fmtDay(exp)}。代金券算作当次的一项优惠，不与其他优惠叠加。在 App「档案」页可以查看：${url}\n\nHi ${name||"there"}, your THE ONEA ${sea.en} member credit is here: $${amt} toward any treatment (not Shelf Edit), valid until ${fmtDay(exp)}. It counts as your one promotion for that visit and can't be combined with other offers. See it on the Profile page of the app: ${url}`;
+}
+
+let cVouchers = [], cEdits = [], perkState = "ready", editForm = null;
+async function loadPerks(id){
+  cVouchers = []; cEdits = []; editForm = null;
+  if (!id) { perkState = "ready"; return renderPerks(); }
+  perkState = "loading"; renderPerks();
+  try { const [v, e] = await Promise.all([DB.vouchersForClient(id), DB.shelfEditsForClient(id)]); if (!cur || cur.id !== id) return; cVouchers = v; cEdits = e; perkState = "ready"; }
+  catch(err) { perkState = "error"; }
+  renderPerks();
+}
+function renderPerks(){
+  const box = $("#perks-box"); if (!box) return;
+  if (!cur?.id) { box.innerHTML = `<p class="sub">保存档案后才能发券、记录 Shelf Edit。</p>`; return; }
+  if (perkState === "loading") { box.innerHTML = `<p class="sub">读取中…</p>`; return; }
+  if (perkState === "error") { box.innerHTML = `<p class="sub" style="color:var(--warn)">读取失败。如果是第一次用，请先在 Supabase 运行 perks.sql。</p>`; return; }
+  const sea = seasonOf(), isMember = membership(cur.data).status === "member", hasThis = cVouchers.some(v => v.season_key === sea.key);
+  const ST = { open: "可用", used: "已使用", expired: "已过期" };
+  const vrows = cVouchers.map(v => { const st = vStatus(v); return `<div class="bal-row"><div><div>$${v.amount_cents/100} · ${esc(seasonFromKey(v.season_key).zh)}</div>
+      <div class="meta">发券 ${fmtDay(v.issued_on)} · 有效至 ${fmtDay(v.expires_on)}${v.used_at ? ` · ${new Date(v.used_at).toLocaleDateString("zh-CN")} 使用` : ""}${v.used_note ? ` · ${esc(v.used_note)}` : ""}</div></div>
+      <div class="amt"><span class="sh-st ${st==="open"?"new":"done"}">${ST[st]}</span><div style="margin-top:6px;display:flex;gap:6px;justify-content:flex-end">
+        ${st==="open" ? `<button type="button" class="btn solid sm" data-pk="use" data-id="${esc(v.id)}">核销</button>` : ""}
+        ${v.used_at ? `<button type="button" class="btn ghost sm" data-pk="unuse" data-id="${esc(v.id)}">撤销</button>` : ""}
+        ${!v.used_at ? `<button type="button" class="icon" data-pk="vdel" data-id="${esc(v.id)}" title="删除">✕</button>` : ""}</div></div></div>`; }).join("");
+  const SE = { booked: "已预约", done: "已完成", cancelled: "已取消" };
+  const erows = cEdits.map(e => `<div class="bal-row"><div><div>${esc(seasonFromKey(e.season_key).zh)} · ${fmtDay(e.visit_date)}</div>
+      <div class="meta">${e.member_price ? "会员价" : "原价"}${e.price_cents != null ? ` $${e.price_cents/100}` : ""}${e.note ? ` · ${esc(e.note)}` : ""}</div></div>
+      <div class="amt"><select data-pk="estatus" data-id="${esc(e.id)}" style="width:auto;padding:6px 10px;font-size:12.5px">${Object.entries(SE).map(([k,l])=>`<option value="${k}" ${e.status===k?"selected":""}>${l}</option>`).join("")}</select>
+        <button type="button" class="icon" data-pk="edel" data-id="${esc(e.id)}" title="删除">✕</button></div></div>`).join("");
+  const thisEdit = cEdits.find(e => e.season_key === sea.key && e.status !== "cancelled");
+  const f = editForm;
+  box.innerHTML = `
+    <div class="sh-sum"><span class="sub"><b style="font-weight:500;color:var(--ink)">代金券</b> · ${isMember ? "会员" : "不是会员（也可以手动发）"}</span>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">${!hasThis ? `<button type="button" class="btn ghost sm" data-pk="issue">发本季代金券</button>` : ""}${cVouchers.some(v=>vStatus(v)==="open") ? `<button type="button" class="btn ghost sm" data-pk="vmsg">复制通知消息</button>` : ""}</span></div>
+    ${vrows || `<p class="sub">还没有代金券。</p>`}
+    <div class="sh-sum" style="margin-top:20px;border-top:1px solid var(--line);padding-top:16px"><span class="sub"><b style="font-weight:500;color:var(--ink)">Shelf Edit 记录</b> · 本季 ${thisEdit ? `<b style="font-weight:500">${SE[thisEdit.status]}</b>` : "还没做"}</span>
+      ${!f ? `<button type="button" class="btn ghost sm" data-pk="eadd">＋ 记录一次 Shelf Edit</button>` : ""}</div>
+    ${f ? `<div class="bal-form" style="margin-top:6px"><div class="grid3">
+        <div class="field"><label class="l">日期</label><input type="date" id="pe-date" value="${esc(f.visit_date)}"></div>
+        <div class="field"><label class="l">状态</label><select id="pe-status">${["booked","done"].map(k=>`<option value="${k}" ${f.status===k?"selected":""}>${SE[k]}</option>`).join("")}</select></div>
+        <div class="field"><label class="l">价格</label><select id="pe-member"><option value="1" ${f.member_price?"selected":""}>会员价 $${CFG.shelfEditMemberPrice||29}</option><option value="0" ${!f.member_price?"selected":""}>原价 $${CFG.shelfEditPrice||49}</option></select></div></div>
+      <div class="field"><label class="l">备注（只有你看得到）</label><input id="pe-note" placeholder="例：订金 $30 已抵扣"></div>
+      <div style="display:flex;gap:8px"><button type="button" class="btn solid sm" data-pk="esave">保存记录</button><button type="button" class="btn ghost sm" data-pk="ecancel">取消</button></div></div>` : ""}
+    ${erows || (!f ? `<p class="sub">还没有 Shelf Edit 记录。每季度一次，不累积，不顺延。</p>` : "")}`;
+}
+$("#editor").addEventListener("change", async e => {
+  const el = e.target; if (el.dataset.pk !== "estatus") return;
+  const r = cEdits.find(x => x.id === el.dataset.id);
+  try { Object.assign(r, await DB.shelfEditSave({ id: r.id, client_id: r.client_id, season_key: r.season_key, status: el.value })); renderPerks(); toast("已更新"); }
+  catch(err) { toast("更新失败：" + (err.message || "")); renderPerks(); }
+});
+$("#editor").addEventListener("click", async e => {
+  const b = e.target.closest("[data-pk]"); if (!b || b.tagName === "SELECT") return;
+  const a = b.dataset.pk, id = b.dataset.id;
+  try {
+    if (a === "issue") { const r = await DB.voucherIssue([newVoucher(cur.id)]); cVouchers = await DB.vouchersForClient(cur.id); allVouchers.push(...r); renderPerks(); toast("已发券"); return; }
+    if (a === "vmsg") { const v = cVouchers.find(x => vStatus(x) === "open"); copyText(voucherMsg(v.expires_on, cur.name)); return; }
+    if (a === "use") {
+      const note = window.prompt("核销备注（可选，只有你看得到），例如：11/28 柔焦护理", "");
+      if (note === null) return;
+      const r = await DB.voucherUpdate(id, { used_at: new Date().toISOString(), used_note: note.trim() || null });
+      Object.assign(cVouchers.find(x => x.id === id), r); const g = allVouchers.find(x => x.id === id); if (g) g.used_at = r.used_at; renderPerks(); toast("已核销"); return;
+    }
+    if (a === "unuse") { if (!(await ask("撤销核销？", "这张代金券会变回「可用」。", "撤销"))) return; const r = await DB.voucherUpdate(id, { used_at: null, used_note: null }); Object.assign(cVouchers.find(x => x.id === id), r); renderPerks(); toast("已撤销"); return; }
+    if (a === "vdel") { if (!(await ask("删除这张代金券？", "客人那边也会看不到。", "删除"))) return; await DB.voucherDelete(id); cVouchers = cVouchers.filter(x => x.id !== id); allVouchers = allVouchers.filter(x => x.id !== id); renderPerks(); toast("已删除"); return; }
+    if (a === "eadd") { editForm = { visit_date: todayStr(), status: "done", member_price: membership(cur.data).status === "member" }; renderPerks(); return; }
+    if (a === "ecancel") { editForm = null; renderPerks(); return; }
+    if (a === "esave") {
+      const d = $("#pe-date").value; if (!d) return toast("请选择日期");
+      const mem = $("#pe-member").value === "1";
+      const row = { client_id: cur.id, season_key: seasonOf(d).key, visit_date: d, status: $("#pe-status").value, member_price: mem,
+        price_cents: Math.round((mem ? (CFG.shelfEditMemberPrice||29) : (CFG.shelfEditPrice||49)) * 100), note: $("#pe-note").value.trim() || null };
+      const r = await DB.shelfEditSave(row); cEdits.unshift(r); cEdits.sort((x,y)=>String(y.visit_date).localeCompare(String(x.visit_date))); editForm = null; renderPerks(); toast("已记录"); return;
+    }
+    if (a === "edel") { if (!(await ask("删除这条记录？", "如果只是客人取消了，可以把状态改成「已取消」。", "删除"))) return; await DB.shelfEditDelete(id); cEdits = cEdits.filter(x => x.id !== id); renderPerks(); toast("已删除"); return; }
+  } catch(err) { toast("操作失败：" + (err.message || "网络问题")); }
 });
 
 /* ========== 储值余额（写入只走数据库函数，记录不能改不能删） ========== */

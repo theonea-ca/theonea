@@ -97,7 +97,11 @@
     const y0 = k === "winter" && m !== 12 ? d.getFullYear() - 1 : d.getFullYear();   // 冬季跨年：12 月所在年份开始
     const y = k === "winter" ? `${y0}–${String(y0 + 1).slice(2)}` : String(y0);
     const n = { winter: ["冬季", "Winter"], spring: ["春季", "Spring"], summer: ["夏季", "Summer"], autumn: ["秋季", "Autumn"] }[k];
-    return { key: `${y0}-${k}`, zh: `${y} ${n[0]}`, en: `${n[1]} ${y}` };
+    const pad = n => String(n).padStart(2, "0");
+    const start = { winter: `${y0}-12-01`, spring: `${y0}-03-01`, summer: `${y0}-06-01`, autumn: `${y0}-09-01` }[k];
+    const febEnd = new Date(y0 + 1, 2, 0).getDate();
+    const end = { winter: `${y0 + 1}-02-${pad(febEnd)}`, spring: `${y0}-05-31`, summer: `${y0}-08-31`, autumn: `${y0}-11-30` }[k];
+    return { key: `${y0}-${k}`, zh: `${y} ${n[0]}`, en: `${n[1]} ${y}`, start, end };
   }
 
   const METRICS = [
@@ -509,6 +513,60 @@
       return data;
     },
 
+    /* ---------- 代金券 + Shelf Edit 记录（只有后台能写） ---------- */
+    async perksGet(phone, code) {
+      if (!LIVE) { const c = demoFind(phone, code); if (!c) return { ok: false, error: "nomatch" };
+        return { ok: true, vouchers: perkDemo.list("v", c.id), shelf_edits: perkDemo.list("e", c.id).filter(x => x.status !== "cancelled") }; }
+      return shelfRpc("member_perks", { p_phone: normPhone(phone), p_code: String(code || "").trim() });
+    },
+    async vouchersAll() {   // 后台：所有券（只要 client_id / season_key / used_at）
+      if (!LIVE) return perkDemo.all("v");
+      const db = await sb();
+      const { data, error } = await db.from("vouchers").select("id,client_id,season_key,used_at,expires_on").limit(5000);
+      if (error) throw error; return data;
+    },
+    async voucherIssue(rows) {   // 同一季度已经有券的会自动跳过
+      if (!LIVE) return perkDemo.issue(rows);
+      const db = await sb();
+      const { data, error } = await db.from("vouchers").upsert(rows, { onConflict: "client_id,season_key", ignoreDuplicates: true }).select();
+      if (error) throw new Error(/vouchers|schema cache/.test(String(error.message||"")) && !/duplicate/.test(error.message) ? "请先在 Supabase 运行 perks.sql" : error.message);
+      return data || [];
+    },
+    async vouchersForClient(cid) {
+      if (!LIVE) return perkDemo.list("v", cid);
+      const db = await sb();
+      const { data, error } = await db.from("vouchers").select("*").eq("client_id", cid).order("issued_on", { ascending: false });
+      if (error) throw error; return data;
+    },
+    async voucherUpdate(id, patch) {
+      if (!LIVE) return perkDemo.update("v", id, patch);
+      const db = await sb();
+      const { data, error } = await db.from("vouchers").update(patch).eq("id", id).select().single();
+      if (error) throw error; return data;
+    },
+    async voucherDelete(id) {
+      if (!LIVE) return perkDemo.del("v", id);
+      const db = await sb(); const { error } = await db.from("vouchers").delete().eq("id", id); if (error) throw error;
+    },
+    async shelfEditsForClient(cid) {
+      if (!LIVE) return perkDemo.list("e", cid);
+      const db = await sb();
+      const { data, error } = await db.from("shelf_edits").select("*").eq("client_id", cid).order("visit_date", { ascending: false });
+      if (error) throw error; return data;
+    },
+    async shelfEditSave(row) {
+      if (!LIVE) return perkDemo.saveEdit(row);
+      const db = await sb();
+      const q = row.id ? db.from("shelf_edits").update(row).eq("id", row.id).select().single() : db.from("shelf_edits").insert(row).select().single();
+      const { data, error } = await q;
+      if (error) throw new Error(/one_per_season|duplicate/.test(String(error.message||"")) ? "这位客人这个季度已经有一条 Shelf Edit 记录了" : error.message);
+      return data;
+    },
+    async shelfEditDelete(id) {
+      if (!LIVE) return perkDemo.del("e", id);
+      const db = await sb(); const { error } = await db.from("shelf_edits").delete().eq("id", id); if (error) throw error;
+    },
+
     async shelfAdminDelete(id) {
       if (!LIVE) { shelfDemo.put(shelfDemo.all().filter(r => r.id !== id)); const ph = shelfDemo.photos(); delete ph[id]; shelfDemo.putPhotos(ph); return; }
       const db = await sb();
@@ -637,6 +695,25 @@
     }
   };
 
+  const perkDemo = {
+    K: { v: "onea:demo-vouchers", e: "onea:demo-shelfedits" },
+    all(t) { try { return JSON.parse(localStorage.getItem(this.K[t]) || "[]"); } catch (e) { return []; } },
+    put(t, rows) { try { localStorage.setItem(this.K[t], JSON.stringify(rows)); } catch (e) {} },
+    list(t, cid) { return this.all(t).filter(r => r.client_id === cid).sort((a, b) => String(b.issued_on || b.visit_date).localeCompare(String(a.issued_on || a.visit_date))); },
+    issue(rows) {
+      const all = this.all("v"), out = [];
+      rows.forEach(r => { if (!all.some(x => x.client_id === r.client_id && x.season_key === r.season_key)) { const n = { id: "v" + Math.random().toString(36).slice(2, 9), used_at: null, used_note: "", ...r }; all.push(n); out.push(n); } });
+      this.put("v", all); return out;
+    },
+    update(t, id, patch) { const all = this.all(t), r = all.find(x => x.id === id); Object.assign(r, patch); this.put(t, all); return r; },
+    del(t, id) { this.put(t, this.all(t).filter(x => x.id !== id)); },
+    saveEdit(row) {
+      const all = this.all("e");
+      if (row.status !== "cancelled" && all.some(x => x.id !== row.id && x.client_id === row.client_id && x.season_key === row.season_key && x.status !== "cancelled")) throw new Error("这位客人这个季度已经有一条 Shelf Edit 记录了");
+      if (row.id) { const r = all.find(x => x.id === row.id); Object.assign(r, row); this.put("e", all); return r; }
+      const n = { id: "e" + Math.random().toString(36).slice(2, 9), ...row }; all.push(n); this.put("e", all); return n;
+    }
+  };
   const routineDemo = {
     KEY: "onea:demo-routine",
     all() { try { return JSON.parse(localStorage.getItem(this.KEY) || "{}"); } catch (e) { return {}; } },
