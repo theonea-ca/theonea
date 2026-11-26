@@ -143,6 +143,15 @@ label.l{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
 .blockform{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px;align-items:end}
 @media(max-width:600px){.blockform{grid-template-columns:1fr 1fr}.blockform .full{grid-column:1/-1}}
 .pref-glance{font-size:12.5px;color:var(--muted);line-height:1.7;margin-top:4px}
+/* 储值余额 */
+.bal-acts{display:flex;flex-wrap:wrap;gap:8px}
+.bal-form{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.bal-row{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.bal-row:last-child{border-bottom:0}
+.bal-row .meta{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.6}
+.bal-row .amt{text-align:right;white-space:nowrap;font-size:13px;line-height:1.6}
+.bal-row .amt .neg{color:var(--warn)}
+.bal-preview{font-size:12.5px;color:var(--muted);margin:2px 0 10px}
 </style>
 </head>
 <body>
@@ -320,6 +329,7 @@ function openEdit(c, pre){
   $("#del").hidden = !cur.id;
   renderEditor(); setDirty(!c && !!pre); show("s-edit");
   loadComfort(cur.id).then(()=>{ if (pre?.comfort) applyComfortPrefill(pre.comfort); });
+  loadBalance(cur.id, pre?.balance);
 }
 
 const biField = (path, obj, {area=false, ph=["中文","English（可选）"]}={}) => {
@@ -400,6 +410,10 @@ function renderEditor(){
     <p class="sub">到店次数按下方「护理记录」里不重复的日期自动计算。满 ${CFG.memberVisits || 3} 次自动成为会员；最近一次到店后 ${CFG.memberActiveDays || 365} 天内有效，过期只是暂停，下次到店自动恢复。</p>
   </div></div>
 
+  <div class="sec"><div class="sec-head"><h2>储值余额</h2><span class="eyebrow">Prepaid balance</span></div>
+    <div class="card" id="bal-box"></div>
+  </div>
+
   <div class="sec"><div class="sec-head"><h2>顾客偏好档案</h2><span class="lock">🔒 仅你可见 · 客人端不显示</span></div>
     <div class="card private" id="comfort-box"></div>
   </div>
@@ -452,6 +466,7 @@ function renderEditor(){
   </div></div>
   <p class="sub" style="margin-top:20px">英文栏可以留空，客人切换到英文时会显示中文内容。</p>`;
   renderComfort();
+  renderBalance();
 }
 
 /* ========== 顾客偏好档案（仅后台） ========== */
@@ -508,6 +523,179 @@ function onComfortField(e){
 }
 $("#editor").addEventListener("input", onComfortField);
 $("#editor").addEventListener("change", onComfortField);
+
+/* ========== 储值余额（写入只走数据库函数，记录不能改不能删） ========== */
+const { balSum } = window.ONEA;
+let balRows = [], balState = "ready", balMode = "", balPre = null, balMsg = "";
+const money = c => { const v = Math.abs(c)/100; return (c<0?"−":"") + "$" + (Number.isInteger(v) ? v : v.toFixed(2)); };
+const signed = c => (c>0?"+":"") + money(c);
+const toCents = v => Math.round(Number(String(v||"").replace(/[^\d.\-]/g,"")) * 100) || 0;
+const BAL_TYPE = { topup:"充值", bonus:"赠送", redeem:"扣款", refund:"退款", adjust:"调整" };
+
+async function loadBalance(id, pre){
+  balRows = []; balMode = pre ? "redeem" : ""; balPre = pre || null; balMsg = "";
+  if (!id) { balState = "ready"; return renderBalance(); }
+  balState = "loading"; renderBalance();
+  try {
+    const r = await DB.listBalance(id);
+    if (!cur || cur.id !== id) return;
+    balRows = r; balState = "ready";
+  } catch(e) { balState = "error"; }
+  renderBalance();
+  if (pre) setTimeout(()=>$("#bal-box")?.scrollIntoView({block:"center", behavior:"smooth"}), 80);
+}
+
+function clientBookings(){
+  return bookings.filter(b => ["confirmed","pending"].includes(b.status) && normPhone(b.phone) === normPhone(cur.phone));
+}
+
+function balFormHtml(s){
+  if (balMode === "topup") {
+    const tiers = (CFG.topupTiers||[]).map((t,i)=>`<button type="button" class="chip" data-bal="tier" data-i="${i}">充 $${t.paid} 送 $${t.bonus}</button>`).join("");
+    return `<div class="bal-form">
+      <div class="chips" style="margin-bottom:12px">${tiers}</div>
+      <div class="grid2">
+        <div class="field"><label class="l">储值金额（客人实付）</label><input id="b-paid" inputmode="decimal" placeholder="500"></div>
+        <div class="field"><label class="l">赠送额度</label><input id="b-bonus" inputmode="decimal" placeholder="0"></div>
+        <div class="field"><label class="l">付款方式</label><select id="b-method"><option>EMT</option><option>现金</option><option>刷卡</option><option>其他</option></select></div>
+        <div class="field"><label class="l">备注（只有你看得到）</label><input id="b-note" placeholder="例：EMT 参考号"></div>
+      </div>
+      <p class="sub" style="margin-bottom:10px">请先确认已经收到款项再充值。记录保存后不能修改，记错了用「调整」冲回。</p>
+      <div style="display:flex;gap:8px"><button type="button" class="btn solid sm" data-bal="do-topup">确认充值</button><button type="button" class="btn ghost sm" data-bal="close">取消</button></div>
+    </div>`;
+  }
+  if (balMode === "redeem") {
+    const bks = clientBookings();
+    const pre = balPre || {};
+    const opts = bks.map(b=>`<option value="${esc(b.ref)}" ${pre.ref===b.ref?"selected":""}>${dayLabel(Date.parse(b.start_at))} ${hm(Date.parse(b.start_at))} · ${esc(bkItems(b))} · $${Number(b.total_price)}</option>`).join("");
+    return `<div class="bal-form">
+      ${bks.length ? `<div class="field"><label class="l">对应预约（选了会自动填好项目和金额）</label><select id="b-bk"><option value="">— 不对应预约 —</option>${opts}</select></div>` : ""}
+      <div class="field"><label class="l">项目名称</label><div class="bi"><div class="tagz" data-l="中"><input id="b-lzh" value="${esc(pre.zh||"")}" placeholder="例：柔焦"></div><div class="tagz" data-l="EN"><input id="b-len" value="${esc(pre.en||"")}" placeholder="e.g. The Soft Focus"></div></div></div>
+      <div class="grid2">
+        <div class="field"><label class="l">扣款金额</label><input id="b-amt" inputmode="decimal" value="${pre.amount!=null?pre.amount:""}" placeholder="169"></div>
+        <div class="field"><label class="l">备注（只有你看得到）</label><input id="b-note" placeholder="例：已用 28dayschange 减 $10"></div>
+      </div>
+      <p class="bal-preview" id="b-preview"></p>
+      <p class="sub" style="margin-bottom:10px">有预约时，默认金额 = 项目价 − 已付定金 $${CFG.depositAmount||30}。用了优惠请先手动改金额。</p>
+      <div style="display:flex;gap:8px"><button type="button" class="btn solid sm" data-bal="do-redeem">确认扣款</button><button type="button" class="btn ghost sm" data-bal="close">取消</button></div>
+    </div>`;
+  }
+  if (balMode === "adjust") {
+    return `<div class="bal-form">
+      <div class="field"><label class="l">类型</label><select id="b-type"><option value="adjust">调整（记错冲回、补偿等）</option><option value="refund">停业退款（清空余额）</option></select></div>
+      <div class="grid2">
+        <div class="field"><label class="l">储值金额变动（减少填负数）</label><input id="b-paid" inputmode="decimal" placeholder="例：-169 或 30"></div>
+        <div class="field"><label class="l">赠送额度变动（减少填负数）</label><input id="b-bonus" inputmode="decimal" placeholder="0"></div>
+      </div>
+      <div class="field"><label class="l">原因（必填，只有你看得到）</label><input id="b-note" placeholder="例：12/18 扣款金额填错"></div>
+      <p class="sub" style="margin-bottom:10px">按储值条款，储值金额不退还；只有停业时才用「停业退款」。</p>
+      <div style="display:flex;gap:8px"><button type="button" class="btn solid sm" data-bal="do-adjust">确认</button><button type="button" class="btn ghost sm" data-bal="close">取消</button></div>
+    </div>`;
+  }
+  return "";
+}
+
+function renderBalance(){
+  const box = $("#bal-box"); if (!box) return;
+  if (!cur.id) { box.innerHTML = `<p class="sub">先保存这位客人的档案，才能充值。</p>`; return; }
+  if (balState === "loading") { box.innerHTML = `<p class="sub">读取中…</p>`; return; }
+  if (balState === "error") { box.innerHTML = `<p class="sub" style="color:var(--warn)">余额读取失败。如果是第一次用，请先在 Supabase 运行 balance.sql。</p>`; return; }
+  const s = balSum(balRows);
+  box.innerHTML = `
+    <div class="mstat"><div class="big">${money(s.paid+s.bonus)}</div><div class="txt"><b>储值 ${money(s.paid)} · 赠送 ${money(s.bonus)}</b><small>扣款先用赠送额度，再用储值金额</small></div></div>
+    <div class="bal-acts">
+      <button type="button" class="btn ${balMode==="topup"?"solid":"ghost"} sm" data-bal="topup">＋ 充值</button>
+      <button type="button" class="btn ${balMode==="redeem"?"solid":"ghost"} sm" data-bal="redeem" ${s.paid+s.bonus>0?"":"disabled"}>用余额付款</button>
+      <button type="button" class="btn ${balMode==="adjust"?"solid":"ghost"} sm" data-bal="adjust">调整</button>
+    </div>
+    ${balFormHtml(s)}
+    ${balMsg ? `<div style="margin-top:14px"><label class="l">发给客人的通知（微信 / 短信）</label><div class="msgbox">${esc(balMsg)}</div><div style="margin-top:8px"><button type="button" class="btn ghost sm" data-bal="copy">复制通知</button></div></div>` : ""}
+    <div style="margin-top:16px">${balRows.length ? balRows.map(r=>`<div class="bal-row">
+      <div><div>${esc(r.label_zh || BAL_TYPE[r.type])} <span class="tag">${BAL_TYPE[r.type]}</span></div>
+        <div class="meta">${new Date(r.created_at).toLocaleString("zh-CN",{timeZone:TZ,month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}${r.method?` · ${esc(r.method)}`:""}${r.booking_ref?` · ${esc(r.booking_ref)}`:""}${r.note?`<br>备注：${esc(r.note)}`:""}</div></div>
+      <div class="amt">${r.paid_cents?`<div class="${r.paid_cents<0?"neg":""}">储值 ${signed(r.paid_cents)}</div>`:""}${r.bonus_cents?`<div class="${r.bonus_cents<0?"neg":""}">赠送 ${signed(r.bonus_cents)}</div>`:""}</div>
+    </div>`).join("") : `<p class="sub">还没有储值记录。</p>`}</div>`;
+  if (balMode === "redeem") updRedeemPreview();
+}
+
+function updRedeemPreview(){
+  const el = $("#b-preview"); if (!el) return;
+  const s = balSum(balRows), amt = toCents($("#b-amt").value);
+  if (amt <= 0) { el.textContent = ""; return; }
+  if (amt > s.paid + s.bonus) { el.innerHTML = `<span style="color:var(--warn)">余额不足：最多可扣 ${money(s.paid+s.bonus)}，差额 ${money(amt-s.paid-s.bonus)} 请客人另付。</span>`; return; }
+  const ub = Math.min(s.bonus, amt);
+  el.textContent = `将扣：赠送 ${money(ub)} + 储值 ${money(amt-ub)} · 扣完余额 ${money(s.paid+s.bonus-amt)}`;
+}
+
+function balNotice(kind, info){
+  const n = cur.name || "", url = CFG.appUrl || "https://theonea.ca/app/";
+  const tot = money(info.paid + info.bonus), pz = money(info.paid), bz = money(info.bonus);
+  if (kind === "topup") return `${n} 您好，已为您充值 ${money(info.addPaid)}${info.addBonus?`，赠送 ${money(info.addBonus)}`:""}。\n当前余额 ${tot}（储值 ${pz} · 赠送 ${bz}）。\n余额和每一笔记录、储值条款都可以在 THE ONEA App「档案」页查看：${url}\n\nHi ${n}, your top-up of ${money(info.addPaid)}${info.addBonus?` (plus a ${money(info.addBonus)} bonus)`:""} is complete.\nCurrent balance: ${tot} (Prepaid ${pz} · Bonus ${bz}).\nSee your balance, every transaction and the balance terms on the Profile page of the THE ONEA app: ${url}`;
+  if (kind === "redeem") return `${n} 您好，本次${info.zh?`「${info.zh}」`:"护理"}已从余额扣除 ${money(info.amt)}。\n当前余额 ${tot}（储值 ${pz} · 赠送 ${bz}）。谢谢你的到来 ✨\n\nHi ${n}, ${money(info.amt)} has been paid from your balance${info.en?` for ${info.en}`:""}.\nCurrent balance: ${tot} (Prepaid ${pz} · Bonus ${bz}). Thank you for coming in ✨`;
+  return `${n} 您好，您的余额已更新。当前余额 ${tot}（储值 ${pz} · 赠送 ${bz}）。\n\nHi ${n}, your balance has been updated. Current balance: ${tot} (Prepaid ${pz} · Bonus ${bz}).`;
+}
+
+async function balAfter(kind, info){
+  balRows = await DB.listBalance(cur.id);
+  balMsg = balNotice(kind, info); balMode = ""; balPre = null;
+  renderBalance();
+}
+
+$("#editor").addEventListener("change", e => {
+  if (e.target.id !== "b-bk") return;
+  const b = bookings.find(x => x.ref === e.target.value);
+  if (!b) { balPre = null; return; }
+  $("#b-lzh").value = (b.items||[]).map(i=>i.zh).join(" + ");
+  $("#b-len").value = (b.items||[]).map(i=>i.en).join(" + ");
+  $("#b-amt").value = Math.max(0, Number(b.total_price) - (b.status==="confirmed" ? Number(CFG.depositAmount||30) : 0));
+  balPre = { ref: b.ref }; updRedeemPreview();
+});
+$("#editor").addEventListener("input", e => { if (e.target.id === "b-amt") updRedeemPreview(); });
+
+$("#editor").addEventListener("click", async e => {
+  const btn = e.target.closest("[data-bal]"); if (!btn) return;
+  const a = btn.dataset.bal;
+  if (["topup","redeem","adjust"].includes(a)) { balMode = balMode === a ? "" : a; if (a !== "redeem") balPre = null; balMsg = ""; renderBalance(); return; }
+  if (a === "close") { balMode = ""; balPre = null; renderBalance(); return; }
+  if (a === "tier") { const t = CFG.topupTiers[+btn.dataset.i]; $("#b-paid").value = t.paid; $("#b-bonus").value = t.bonus; return; }
+  if (a === "copy") { await copyText(balMsg); return; }
+  btn.disabled = true;
+  try {
+    if (a === "do-topup") {
+      const p = toCents($("#b-paid").value), b = toCents($("#b-bonus").value);
+      if (p <= 0) { toast("请填写储值金额"); return; }
+      if (b < 0) { toast("赠送额度不能是负数"); return; }
+      if (!(await ask("确认充值？", `${cur.name}：储值 ${money(p)}${b?`，赠送 ${money(b)}`:""}，付款方式 ${$("#b-method").value}。请确认已经收到款项。`, "确认充值"))) return;
+      const r = await DB.balanceTopup(cur.id, p, b, $("#b-method").value, $("#b-note").value.trim());
+      await balAfter("topup", { ...r, addPaid: p, addBonus: b });
+      if (!cur.data.member?.prepaid) {   // 第一次储值：自动成为储值会员
+        setPath(cur, "data.member.prepaid", true); setPath(cur, "data.member.prepaidSince", todayStr());
+        $("#save").click();
+      } else toast("已充值 ✓");
+    }
+    if (a === "do-redeem") {
+      const amt = toCents($("#b-amt").value), zh = $("#b-lzh").value.trim(), en = $("#b-len").value.trim();
+      if (amt <= 0) { toast("请填写扣款金额"); return; }
+      if (!zh && !en) { toast("请填写项目名称，客人记录里会显示"); return; }
+      if (!(await ask("确认用余额付款？", `${cur.name}：${zh||en} · 扣 ${money(amt)}`, "确认扣款"))) return;
+      const r = await DB.balanceRedeem(cur.id, amt, ($("#b-bk") ? $("#b-bk").value : balPre?.ref) || null, zh, en, $("#b-note").value.trim());
+      await balAfter("redeem", { ...r, amt, zh, en }); toast("已扣款 ✓");
+    }
+    if (a === "do-adjust") {
+      const type = $("#b-type").value, p = toCents($("#b-paid").value), b = toCents($("#b-bonus").value), note = $("#b-note").value.trim();
+      if (!p && !b) { toast("请填写变动金额"); return; }
+      if (!note) { toast("请填写原因"); return; }
+      if (!(await ask(type==="refund"?"确认停业退款？":"确认调整？", `${cur.name}：储值 ${signed(p)} · 赠送 ${signed(b)}。原因：${note}`, "确认"))) return;
+      const r = await DB.balanceAdjust(cur.id, type, p, b, note);
+      await balAfter("adjust", r); toast("已更新 ✓");
+    }
+  } catch(err) { toast("没有成功：" + (err.message || "网络问题")); }
+  finally { btn.disabled = false; }
+});
+$("#editor").addEventListener("change", e => {
+  if (e.target.id !== "b-type" || e.target.value !== "refund") return;
+  const s = balSum(balRows); $("#b-paid").value = s.paid ? -s.paid/100 : ""; $("#b-bonus").value = s.bonus ? -s.bonus/100 : "";
+});
 
 /* ========== 到店前问卷（仅后台） ========== */
 let intakes = [], intakeErr = false, showOldIntakes = false, intakeFrom = "s-list";
@@ -678,6 +866,7 @@ function renderBookings(){
         ${b.status==="blocked" ? `<button type="button" class="btn warn sm" data-act="del">删除占用</button>` : `
           ${["pending","expired"].includes(b.status) ? `<button type="button" class="btn solid sm" data-act="confirm">确认已收订金</button>` : ""}
           ${b.status==="confirmed" ? `<button type="button" class="btn solid sm" data-act="copy">复制确认消息</button>` : ""}
+          ${c && b.status==="confirmed" ? `<button type="button" class="btn ghost sm" data-act="paybal">用余额付款</button>` : ""}
           <button type="button" class="btn ghost sm" data-act="client">${c?"打开档案":"建立档案"}</button>
           ${it ? `<button type="button" class="btn ghost sm" data-act="intake">看问卷</button>` : ""}
           ${["pending","confirmed"].includes(b.status) ? `<button type="button" class="btn ghost sm" data-act="move">改期</button>` : ""}
@@ -720,6 +909,11 @@ $("#bk-list").onclick = async e => {
     if (act === "del") {
       if (!(await ask("删除这段占用时间？", "删除后这段时间会重新开放给客人预约。", "删除"))) return;
       await DB.deleteBooking(b.id); bookings = bookings.filter(x => x.id !== b.id); renderBookings(); toast("已删除");
+    }
+    if (act === "paybal") {
+      const c = clientByPhone(b.phone);
+      openEdit(c, { balance: { ref: b.ref, zh: (b.items||[]).map(i=>i.zh).join(" + "), en: (b.items||[]).map(i=>i.en).join(" + "), amount: Math.max(0, Number(b.total_price) - Number(CFG.depositAmount||30)) } });
+      return;
     }
     if (act === "client") { const c = clientByPhone(b.phone); openEdit(c || null, c ? null : { name: b.name, phone: normPhone(b.phone) }); }
     if (act === "intake") { const it = intakes.find(i => normPhone(i.phone) === normPhone(b.phone)); if (it) openIntake(it.id, "s-book"); }

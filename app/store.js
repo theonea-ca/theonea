@@ -357,11 +357,90 @@
       const { data, error } = await db.from("client_comfort").upsert(row, { onConflict: "client_id" }).select().single();
       if (error) throw error;
       return data;
+    },
+
+    /* ---------- 储值余额：只记流水，金额以「分」存；写入只走数据库函数 ---------- */
+    async listBalance(clientId) {
+      if (!clientId) return [];
+      if (!LIVE) return balDemo.rows(clientId);
+      const db = await sb();
+      const { data, error } = await db.from("balance_transactions").select("*").eq("client_id", clientId).order("created_at", { ascending: false }).limit(300);
+      if (error) throw error;
+      return data;
+    },
+    async balanceTopup(clientId, paidCents, bonusCents, method, note) {
+      if (!LIVE) return balDemo.topup(clientId, paidCents, bonusCents, method, note);
+      return balRpc("balance_topup", { p_client: clientId, p_paid_cents: paidCents, p_bonus_cents: bonusCents || 0, p_method: method || null, p_note: note || null });
+    },
+    async balanceRedeem(clientId, amountCents, ref, labelZh, labelEn, note) {
+      if (!LIVE) return balDemo.redeem(clientId, amountCents, ref, labelZh, labelEn, note);
+      return balRpc("balance_redeem", { p_client: clientId, p_amount_cents: amountCents, p_booking_ref: ref || null, p_label_zh: labelZh || null, p_label_en: labelEn || null, p_note: note || null });
+    },
+    async balanceAdjust(clientId, type, paidCents, bonusCents, note) {
+      if (!LIVE) return balDemo.adjust(clientId, type, paidCents, bonusCents, note);
+      return balRpc("balance_adjust", { p_client: clientId, p_type: type, p_paid_cents: paidCents || 0, p_bonus_cents: bonusCents || 0, p_note: note || "" });
+    },
+    async clientBalance(phone, code) {
+      if (!LIVE) {
+        const c = demoLoad().find(x => x.phone === normPhone(phone) && x.code === String(code || "").trim());
+        if (!c) return { ok: false };
+        const rows = balDemo.rows(c.id), s = balSum(rows);
+        return { ok: true, paid: s.paid, bonus: s.bonus, tx: rows.map(r => ({ type: r.type, paid: r.paid_cents, bonus: r.bonus_cents, label_zh: r.label_zh, label_en: r.label_en, at: r.created_at })) };
+      }
+      try {
+        const db = await sb();
+        const { data, error } = await db.rpc("client_balance", { p_phone: normPhone(phone), p_code: String(code || "").trim() });
+        if (error) return { ok: false, error: "network" };
+        return data;
+      } catch (e) { return { ok: false, error: "network" }; }
+    }
+  };
+
+  /* ---------- 储值：共用工具 + 演示模式 ---------- */
+  const balSum = rows => rows.reduce((s, r) => ({ paid: s.paid + (r.paid_cents || 0), bonus: s.bonus + (r.bonus_cents || 0) }), { paid: 0, bonus: 0 });
+  const BAL_ERR = { insufficient: "余额不足", note_required: "调整需要填写备注", bad_amount: "金额不正确", not_allowed: "请先登录后台" };
+  async function balRpc(fn, args) {
+    const db = await sb();
+    const { data, error } = await db.rpc(fn, args);
+    if (error) {
+      const k = Object.keys(BAL_ERR).find(k => String(error.message || "").includes(k));
+      throw new Error(k ? BAL_ERR[k] : (String(error.message || "").includes("function") ? "请先在 Supabase 运行 balance.sql" : error.message));
+    }
+    return data;
+  }
+  const balDemo = {
+    KEY: "onea:demo-balance",
+    all() { try { return JSON.parse(localStorage.getItem(this.KEY) || "[]"); } catch (e) { return []; } },
+    put(rows) { try { localStorage.setItem(this.KEY, JSON.stringify(rows)); } catch (e) {} },
+    rows(cid) { return this.all().filter(r => r.client_id === cid).sort((a, b) => b.created_at.localeCompare(a.created_at)); },
+    add(cid, list) {
+      const all = this.all(), now = Date.now();
+      list.forEach((r, i) => all.push({ id: "t" + now.toString(36) + i, client_id: cid, paid_cents: 0, bonus_cents: 0, created_at: new Date(now + i).toISOString(), ...r }));
+      this.put(all); const s = balSum(this.rows(cid)); return { paid: s.paid, bonus: s.bonus };
+    },
+    topup(cid, p, b, method, note) {
+      if (!(p > 0) || b < 0) throw new Error(BAL_ERR.bad_amount);
+      const list = [{ type: "topup", paid_cents: p, label_zh: "储值充值", label_en: "Top-up", method, note }];
+      if (b > 0) list.push({ type: "bonus", bonus_cents: b, label_zh: "充值赠送", label_en: "Bonus" });
+      return this.add(cid, list);
+    },
+    redeem(cid, amt, ref, zh, en, note) {
+      if (!(amt > 0)) throw new Error(BAL_ERR.bad_amount);
+      const s = balSum(this.rows(cid)); if (s.paid + s.bonus < amt) throw new Error(BAL_ERR.insufficient);
+      const ub = Math.min(s.bonus, amt), up = amt - ub;
+      const r = this.add(cid, [{ type: "redeem", paid_cents: -up, bonus_cents: -ub, booking_ref: ref, label_zh: zh, label_en: en, note }]);
+      return { ...r, used_paid: up, used_bonus: ub };
+    },
+    adjust(cid, type, p, b, note) {
+      if (!String(note || "").trim()) throw new Error(BAL_ERR.note_required);
+      if (!p && !b) throw new Error(BAL_ERR.bad_amount);
+      const s = balSum(this.rows(cid)); if (s.paid + p < 0 || s.bonus + b < 0) throw new Error(BAL_ERR.insufficient);
+      return this.add(cid, [{ type, paid_cents: p, bonus_cents: b, label_zh: type === "refund" ? "余额退款" : "余额调整", label_en: type === "refund" ? "Refund" : "Adjustment", note }]);
     }
   };
   // persist demo writes made via saveClient
   const _save = DB.saveClient;
   DB.saveClient = async c => { const r = await _save(c); if (!LIVE) demoSave(); return r; };
 
-  window.ONEA = { CFG, LIVE, PRESETS, METRICS, JOURNEY, DB, blankData, normPhone, bi, membership };
+  window.ONEA = { CFG, LIVE, PRESETS, METRICS, JOURNEY, DB, blankData, normPhone, bi, membership, balSum };
 })();
