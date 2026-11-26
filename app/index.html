@@ -346,7 +346,7 @@ const T = {
     grpAttention:"需要注意", grpKeep:"保留", grpWaiting:"等待查看",
     vWait:"等待护理师查看", vRewait:"已修改 · 等待重新查看", adviceBy:"护理师说明", noPhoto:"还没拍成分表",
     seTitle:"预约 Shelf Edit", seSub:"上传好之后，预约一次 Shelf Edit：到店当面看皮肤，带走你的 Routine Card。",
-    seMember:"会员价 $29", seRegular:"$49 · 会员 $29", sePay:"到店付款", seBook:"预约 Shelf Edit →",
+    seMember:"会员价 $29", seRegular:"$49 · 会员 $29", sePay:"可到店付款", sePayNow:"现在刷卡付 {p}", sePayNote:"也可以到店再付。提前付款请用和 app 相同的名字，方便我们核对。", seBook:"预约 Shelf Edit →",
     fPhotos:"照片", fFront:"正面", fIngr:"成分表", fAddPhoto:"＋ 拍照", fRetake:"重拍", fRemove:"删除照片", fPhotoTip:"正面能看清品牌和名字；成分表拍清楚、不反光就好。", fLoading:"读取照片中…",
     fName:"产品名称", fBrand:"品牌", fCat:"类型", fUsage:"使用频率", fOpened:"开封日期", fNote:"想告诉护理师的（可选）",
     fNamePh:"例：修护精华 / B5 修复霜", fBrandPh:"例：理肤泉", fNotePh:"例：用了有点刺痛；朋友推荐但还没开始用", choose:"— 请选择 —",
@@ -399,7 +399,7 @@ const T = {
     grpAttention:"Needs attention", grpKeep:"Keep", grpWaiting:"Waiting for review",
     vWait:"Waiting for your therapist", vRewait:"Updated · waiting for review", adviceBy:"From your therapist", noPhoto:"No ingredient photo yet",
     seTitle:"Book a Shelf Edit", seSub:"Once your products are in, book a Shelf Edit — we'll look at your skin together and you'll take home your Routine Card.",
-    seMember:"Member price $29", seRegular:"$49 · members $29", sePay:"Pay at the studio", seBook:"Book a Shelf Edit →",
+    seMember:"Member price $29", seRegular:"$49 · members $29", sePay:"pay at the studio", sePayNow:"Pay {p} now by card", sePayNote:"You can also pay at the studio. If you pay ahead, please use the same name as in the app so we can match it.", seBook:"Book a Shelf Edit →",
     fPhotos:"Photos", fFront:"Front", fIngr:"Ingredients", fAddPhoto:"＋ Photo", fRetake:"Retake", fRemove:"Remove photo", fPhotoTip:"Front: brand and name visible. Ingredients: clear, without glare.", fLoading:"Loading photos…",
     fName:"Product name", fBrand:"Brand", fCat:"Type", fUsage:"How often you use it", fOpened:"Date opened", fNote:"Anything to tell your therapist (optional)",
     fNamePh:"e.g. Repair serum / B5 balm", fBrandPh:"e.g. La Roche-Posay", fNotePh:"e.g. It stings a little; a friend recommended it but I haven't started", choose:"— Select —",
@@ -705,11 +705,13 @@ function shelfItem(it){
 }
 function shelfEditCard(){
   const m = membership(client.data, ymd(today)), mem = m.status === "member";
+  const payUrl = (CFG.shelfEditPayUrl || {})[mem ? "member" : "regular"] || "";
   const url = (CFG.bookingUrl || "https://theonea.ca/book/") + (String(CFG.bookingUrl||"").includes("?") ? "&" : "?") + "s=" + encodeURIComponent(CFG.shelfEditService || "shelf_edit");
   return `<section><div class="card secard"><div class="sec-head" style="margin-bottom:6px"><h2>${t("seTitle")}</h2><span class="eyebrow">Shelf Edit</span></div>
     <p class="sub">${t("seSub")}</p>
     <div class="seprice"><b>${mem ? "$29" : "$49"}</b><span>${t(mem ? "seMember" : "seRegular")} · ${t("sePay")}</span></div>
-    <a class="btn solid full" href="${esc(url)}" target="_blank" rel="noopener">${t("seBook")}</a></div></section>`;
+    <a class="btn solid full" href="${esc(url)}" target="_blank" rel="noopener">${t("seBook")}</a>
+    ${payUrl ? `<a class="btn ghost full" style="margin-top:10px" href="${esc(payUrl)}" target="_blank" rel="noopener">${t("sePayNow",{p:mem?"$29":"$49"})}</a><p class="sub" style="font-size:12px;margin-top:8px;text-align:center">${t("sePayNote")}</p>` : ""}</div></section>`;
 }
 function renderShelf(){
   const box = $("#v-shelf"); if (!box || !client) return;
