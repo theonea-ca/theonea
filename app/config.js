@@ -23,6 +23,11 @@ window.ONEA_CONFIG = {
   // 预约订金：客人用 Interac e-Transfer 发到这个邮箱
   emtEmail: "wyran0319@gmail.com",
   depositAmount: 30,
+  // Square 收款链接（留空 = 不显示刷卡按钮）。在 Square 后台 → 在线 → 付款链接里创建，复制链接粘贴到这里
+  // 预约订金 $30：显示在预约成功页，和 e-Transfer 并列
+  depositPayUrl: "",
+  // Shelf Edit：会员 $29 / 非会员 $49 各建一个链接，护肤柜页面会按客人身份显示对应的那个
+  shelfEditPayUrl: { member: "https://square.link/u/9K4paUBq", regular: "" },
 
   // 护肤柜页面「预约 Shelf Edit」按钮：预约系统里 Shelf Edit 项目的 id
   shelfEditService: "shelf_edit",
